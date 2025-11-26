@@ -1,3 +1,81 @@
+# be-booking (backend)
+
+This is a minimal NestJS backend for the Pickleball Booking system. It includes modules and endpoints for Auth, Users, Courts, TimeSlots, Bookings, Payments (stub), Reviews, Upload (Cloudinary), Locations, and Settings.
+
+## Quick start
+
+Set environment variables in `.env` (example already included).
+
+Install and run (Windows PowerShell):
+
+```powershell
+cd be-booking
+npm install --legacy-peer-deps
+npm run start:dev
+```
+
+The app runs at http://localhost:3000 by default.
+
+## Main API endpoints (summary)
+
+- Auth
+  - POST /auth/register { email, password, fullname, phone } -> { user, accessToken }
+  - POST /auth/login { email, password } -> { accessToken, refreshToken }
+  - POST /auth/refresh-token { refreshToken } -> { accessToken }
+  - POST /auth/forgot-password { email } -> { ok, resetToken }
+  - POST /auth/reset-password { resetToken, password } -> { ok }
+  - GET /auth/profile (Bearer) -> returns authenticated user
+
+- Users
+  - GET /users (protected)
+  - GET /users/:id (protected)
+  - POST /users (protected)
+  - PATCH /users/:id (protected)
+  - PATCH /users/:id/role (protected)
+  - DELETE /users/:id (protected)
+
+- Locations
+  - POST/GET/GET:id/PATCH/DELETE /locations
+
+- Courts
+  - POST /courts (protected)
+  - GET /courts?locationId=&minPrice=&maxPrice=&isActive= -> filter
+  - GET /courts/:id
+  - PUT /courts/:id (protected)
+  - DELETE /courts/:id (protected)
+
+- TimeSlots
+  - POST /courts/:id/timeslots (protected) -> create slots for a date
+  - GET /courts/:id/timeslots?date=YYYY-MM-DD
+  - DELETE /timeslots/:id (protected)
+
+- Bookings
+  - POST /bookings (protected) { courtId, date, slotId, paymentMethod, note }
+  - GET /bookings/my (protected)
+  - GET /bookings?courtId=&date=
+  - GET /bookings/:id
+  - PATCH /bookings/:id/cancel (protected)
+
+- Payments (stub)
+  - POST /payments/create { bookingId, provider }
+  - POST /payments/callback
+  - GET /payments/status?bookingId=
+
+- Reviews
+  - POST /reviews (protected)
+  - GET /reviews/court/:id
+
+- Upload
+  - Images are uploaded directly to Cloudinary when creating or updating courts. There is no standalone `/upload` API.
+  - When creating/updating a court, provide `images` as an array of base64 strings or existing Cloudinary URLs — the server will upload base64 images to Cloudinary and store returned URLs.
+
+- Settings
+  - GET /settings (protected)
+  - PUT /settings (protected)
+
+## Notes
+- This project uses TypeORM with MySQL (config in `.env`). For dev ease, `synchronize: true` is enabled — switch it off for production.
+- The Payments module is a stub — to integrate with VNPay / MoMo / ZaloPay, implement provider-specific flows.
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
