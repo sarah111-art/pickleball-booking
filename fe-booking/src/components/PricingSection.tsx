@@ -25,8 +25,8 @@ const PricingSection = () => {
   ];
 
   return (
-    <section className="py-20 bg-muted/30">
-      <div className="container px-4">
+    <section className="py-12 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
+      <div className="container px-4 ">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Bảng Giá & Khung Giờ</h2>
           <p className="text-lg text-muted-foreground">Giá cả minh bạch, phù hợp mọi nhu cầu</p>

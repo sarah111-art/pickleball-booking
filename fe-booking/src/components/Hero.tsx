@@ -1,4 +1,5 @@
 import { Calendar, Clock } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import heroImage from "@/assets/hero-pickleball.jpg";
 
@@ -12,9 +13,7 @@ const Hero = () => {
           alt="Sân Pickleball chuyên nghiệp" 
           className="w-full h-full object-cover"
         />
-     <div className="absolute inset-0 bg-black/50" />
-
-
+        <div className="absolute inset-0 bg-gradient-hero" />
       </div>
 
       {/* Content */}
@@ -29,14 +28,18 @@ const Hero = () => {
             Hệ thống sân Pickleball hiện đại nhất Việt Nam. Đặt sân online 24/7, giá cả minh bạch, dịch vụ chuyên nghiệp.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-200">
-            <Button size="lg" variant="secondary" className="text-lg px-8 py-6 shadow-lg hover:shadow-xl transition-all hover:scale-105">
-              <Calendar className="mr-2" />
-              Đặt Sân Ngay
-            </Button>
-            <Button size="lg" variant="outline" className="text-lg px-8 py-6 bg-background/10 backdrop-blur-sm border-2 border-primary-foreground hover:bg-primary-foreground hover:text-primary transition-all">
-              <Clock className="mr-2" />
-              Xem Giá & Lịch
-            </Button>
+            <Link to="/booking">
+              <Button size="lg" variant="secondary" className="text-lg px-8 py-6 shadow-lg hover:shadow-xl transition-all hover:scale-105">
+                <Calendar className="mr-2" />
+                Đặt Sân Ngay
+              </Button>
+            </Link>
+            <Link to="/schedule">
+              <Button size="lg" variant="outline" className="text-lg px-8 py-6 bg-background/10 backdrop-blur-sm border-2 border-primary-foreground hover:bg-primary-foreground hover:text-primary transition-all">
+                <Clock className="mr-2" />
+                Xem Giá & Lịch
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

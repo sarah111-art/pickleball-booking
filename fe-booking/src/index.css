@@ -86,13 +86,10 @@ All colors MUST be HSL.
 
 @layer base {
   * {
-    /* Use direct border color from CSS variables rather than applying a Tailwind utility
-       This avoids a PostCSS error when the utility isn't available during transform. */
-    border-color: hsl(var(--border));
+    @apply border-border;
   }
 
   body {
-    background: hsl(var(--background));
-    color: hsl(var(--foreground));
+    @apply bg-background text-foreground;
   }
 }
