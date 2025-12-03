@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ReviewsService } from './reviews.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -14,7 +14,7 @@ export class ReviewsController {
   }
 
   @Get('court/:id')
-  forCourt(@Param('id', ParseIntPipe) id: number) {
+  forCourt(@Param('id') id: string) {
     return this.svc.findByCourt(id);
   }
 }

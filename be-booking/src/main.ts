@@ -9,10 +9,26 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ChatModule } from './modules/chat/chat.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Enable CORS for frontend
+  app.enableCors({
+    origin: [
+      'http://localhost:5173', 
+      'http://localhost:8080',
+      // Allow VNPay to call IPN endpoint
+      'https://sandbox.vnpayment.vn',
+      'https://vnpayment.vn',
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    credentials: true,
+    // Allow all headers for VNPay
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  });
 
   const config = new DocumentBuilder()
     .setTitle('Pickleball Booking API')
@@ -58,6 +74,7 @@ async function bootstrap() {
       SettingsModule,
       PaymentsModule,
       AuthModule,
+      ChatModule,
     ],
   });
   SwaggerModule.setup('api/docs', app, document);

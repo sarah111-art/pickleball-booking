@@ -3,8 +3,8 @@ import { Court } from './court.entity';
 
 @Entity('timeslots')
 export class TimeSlot {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @ManyToOne(() => Court, { onDelete: 'CASCADE' })
   court: Court;

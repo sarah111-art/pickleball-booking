@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { CourtsService } from './courts.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { TimeSlotsService } from '../timeslots/timeslots.service';
 
 @Controller('courts')
 export class CourtsController {
-  constructor(private svc: CourtsService) {}
+  constructor(private svc: CourtsService, private ts: TimeSlotsService) {}
 
   @UseGuards(JwtAuthGuard)
   @Post()
@@ -18,19 +19,25 @@ export class CourtsController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id') id: string) {
     return this.svc.findOne(id);
+  }
+
+  @Get(':id/slots')
+  findSlotsAlias(@Param('id') id: string, @Query('date') date?: string) {
+    if (!date) return [];
+    return this.ts.findByCourtAndDate(id, date);
   }
 
   @UseGuards(JwtAuthGuard)
   @Put(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
+  update(@Param('id') id: string, @Body() body: any) {
     return this.svc.update(id, body);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(@Param('id') id: string) {
     return this.svc.remove(id);
   }
 }

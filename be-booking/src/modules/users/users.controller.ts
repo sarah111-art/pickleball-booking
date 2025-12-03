@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   UseGuards,
@@ -25,7 +24,7 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
   }
 
@@ -37,19 +36,19 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
+  update(@Param('id') id: string, @Body() body: any) {
     return this.usersService.update(id, body);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id/role')
-  updateRole(@Param('id', ParseIntPipe) id: number, @Body('role') role: string) {
+  updateRole(@Param('id') id: string, @Body('role') role: string) {
     return this.usersService.update(id, { role: role as any });
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(@Param('id') id: string) {
     return this.usersService.remove(id);
   }
 }

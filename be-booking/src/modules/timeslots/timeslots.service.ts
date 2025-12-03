@@ -17,11 +17,26 @@ export class TimeSlotsService {
     return created;
   }
 
-  findByCourtAndDate(courtId: number, date: string) {
+  findByCourtAndDate(courtId: string, date: string) {
     return this.repo.find({ where: { date, court: { id: courtId } }, relations: ['court'] });
   }
 
-  async remove(id: number) {
+  async findByDate(date: string, venueId?: string) {
+    const qb = this.repo.createQueryBuilder('slot')
+      .leftJoinAndSelect('slot.court', 'court')
+      .leftJoinAndSelect('court.venue', 'venue')
+      .where('slot.date = :date', { date })
+      .andWhere('slot.isBooked = :isBooked', { isBooked: false })
+      .orderBy('slot.start', 'ASC');
+
+    if (venueId) {
+      qb.andWhere('court.venueId = :venueId', { venueId });
+    }
+
+    return qb.getMany();
+  }
+
+  async remove(id: string) {
     const e = await this.repo.findOne({ where: { id } });
     if (!e) throw new NotFoundException('TimeSlot not found');
     return this.repo.remove(e);

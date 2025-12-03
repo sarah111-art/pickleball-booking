@@ -16,18 +16,18 @@ export class LocationsService {
     return this.repo.find();
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     const e = await this.repo.findOne({ where: { id } });
     if (!e) throw new NotFoundException('Location not found');
     return e;
   }
 
-  async update(id: number, payload: Partial<Location>) {
+  async update(id: string, payload: Partial<Location>) {
     await this.repo.update(id, payload);
     return this.findOne(id);
   }
 
-  async remove(id: number) {
+  async remove(id: string) {
     const e = await this.findOne(id);
     return this.repo.remove(e);
   }

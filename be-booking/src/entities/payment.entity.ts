@@ -5,8 +5,8 @@ export type PaymentStatus = 'pending' | 'paid' | 'failed';
 
 @Entity('payments')
 export class Payment {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @ManyToOne(() => Booking, { onDelete: 'CASCADE', eager: true })
   booking: Booking;
@@ -19,6 +19,9 @@ export class Payment {
 
   @Column({ type: 'varchar', nullable: true })
   qrUrl?: string;
+
+  @Column({ type: 'text', nullable: true })
+  paymentUrl?: string;
 
   @Column({ type: 'varchar', default: 'pending' })
   status: PaymentStatus;

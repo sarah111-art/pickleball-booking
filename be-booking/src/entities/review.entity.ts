@@ -4,8 +4,8 @@ import { User } from './user.entity';
 
 @Entity('reviews')
 export class Review {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @ManyToOne(() => Court, { onDelete: 'CASCADE', eager: true })
   court: Court;

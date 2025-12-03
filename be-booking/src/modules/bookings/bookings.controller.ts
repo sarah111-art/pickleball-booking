@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -25,13 +25,13 @@ export class BookingsController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id') id: string) {
     return this.svc.findOne(id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id/cancel')
-  cancel(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+  cancel(@Param('id') id: string, @Req() req: any) {
     return this.svc.cancel(id, req.user?.id);
   }
 }

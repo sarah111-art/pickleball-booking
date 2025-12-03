@@ -2,8 +2,8 @@ import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('settings')
 export class Setting {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   // fee (percentage or fixed) — keep as numeric
   @Column({ type: 'decimal', precision: 6, scale: 2, default: 0 })

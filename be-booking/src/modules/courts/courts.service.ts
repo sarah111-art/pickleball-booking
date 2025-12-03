@@ -28,9 +28,10 @@ export class CourtsService {
   }
 
   findAll(query?: Record<string, any>) {
-    const qb = this.repo.createQueryBuilder('court');
+    const qb = this.repo.createQueryBuilder('court')
+      .leftJoinAndSelect('court.venue', 'venue');
 
-    if (query?.locationId) qb.andWhere('court.locationId = :loc', { loc: query.locationId });
+    if (query?.venueId) qb.andWhere('court.venueId = :venueId', { venueId: query.venueId });
     if (query?.minPrice) qb.andWhere('court.pricePerHour >= :min', { min: query.minPrice });
     if (query?.maxPrice) qb.andWhere('court.pricePerHour <= :max', { max: query.maxPrice });
     if (query?.isActive !== undefined) qb.andWhere('court.isActive = :active', { active: Boolean(query.isActive) });
@@ -38,13 +39,13 @@ export class CourtsService {
     return qb.getMany();
   }
 
-  async findOne(id: number) {
-    const e = await this.repo.findOne({ where: { id } });
+  async findOne(id: string) {
+    const e = await this.repo.findOne({ where: { id }, relations: ['venue'] });
     if (!e) throw new NotFoundException('Court not found');
     return e;
   }
 
-  async update(id: number, payload: Partial<Court>) {
+  async update(id: string, payload: Partial<Court>) {
     if (payload.images && Array.isArray(payload.images) && this.uploadSvc) {
       const out: string[] = [];
       for (const img of payload.images) {
@@ -62,7 +63,7 @@ export class CourtsService {
     return this.findOne(id);
   }
 
-  async remove(id: number) {
+  async remove(id: string) {
     const e = await this.findOne(id);
     return this.repo.remove(e);
   }

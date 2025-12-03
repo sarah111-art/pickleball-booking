@@ -12,7 +12,12 @@ import { Booking } from './entities/booking.entity';
 import { Review } from './entities/review.entity';
 import { Payment } from './entities/payment.entity';
 import { Setting } from './entities/setting.entity';
+import { Venue } from './entities/venue.entity';
+import { ChatConversation } from './entities/chat-conversation.entity';
+import { ChatMessage } from './entities/chat-message.entity';
 import { UsersModule } from './modules/users/users.module';
+import { VenuesModule } from './modules/venues/venues.module';
+import { ChatModule } from './modules/chat/chat.module';
 import { LocationsModule } from './modules/locations/locations.module';
 import { CourtsModule } from './modules/courts/courts.module';
 import { TimeSlotsModule } from './modules/timeslots/timeslots.module';
@@ -33,7 +38,7 @@ import { AuthModule } from './modules/auth/auth.module';
       inject: [ConfigService],
       useFactory: (cfg: ConfigService): TypeOrmModuleOptions => {
         const skip = (process.env.SKIP_DB ?? cfg.get('SKIP_DB')) === 'true';
-        const entities = [User, Location, Court, TimeSlot, Booking, Review, Setting, Payment];
+        const entities = [User, Location, Court, TimeSlot, Booking, Review, Setting, Payment, Venue, ChatConversation, ChatMessage];
 
         const trimQuotes = (s?: string) =>
           (s || '').replace(/^\s*"(.*)"\s*$/, '$1').replace(/^\s*'(.*)'\s*$/, '$1');
@@ -43,7 +48,7 @@ import { AuthModule } from './modules/auth/auth.module';
             type: 'sqlite' as const,
             database: ':memory:',
             entities,
-            synchronize: true,
+            synchronize: false,
           };
         }
 
@@ -53,13 +58,14 @@ import { AuthModule } from './modules/auth/auth.module';
           port: Number(cfg.get('DB_PORT') ?? 3306),
           username: cfg.get('DB_USERNAME') ?? 'root',
           password: trimQuotes(cfg.get<string>('DB_PASSWORD')),
-          database: (cfg.get<string>('DB_NAME') ?? 'pickleball_booking') as string,
+          database: (cfg.get<string>('DB_DATABASE') ?? cfg.get<string>('DB_NAME') ?? 'pickleball_booking') as string,
           entities,
           synchronize: true,
         };
       },
     }),
     UsersModule,
+    VenuesModule,
     LocationsModule,
     CourtsModule,
     TimeSlotsModule,
@@ -69,6 +75,7 @@ import { AuthModule } from './modules/auth/auth.module';
     SettingsModule,
     PaymentsModule,
     AuthModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

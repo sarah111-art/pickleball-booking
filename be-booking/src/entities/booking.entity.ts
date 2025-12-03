@@ -7,8 +7,8 @@ export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'paid';
 
 @Entity('bookings')
 export class Booking {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @ManyToOne(() => User, { eager: true, onDelete: 'SET NULL' })
   user: User;
