@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
@@ -36,7 +37,13 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: any) {
+  updatePatch(@Param('id') id: string, @Body() body: any) {
+    return this.usersService.update(id, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put(':id')
+  updatePut(@Param('id') id: string, @Body() body: any) {
     return this.usersService.update(id, body);
   }
 

@@ -15,6 +15,9 @@ import { Setting } from './entities/setting.entity';
 import { Venue } from './entities/venue.entity';
 import { ChatConversation } from './entities/chat-conversation.entity';
 import { ChatMessage } from './entities/chat-message.entity';
+import { Product } from './entities/product.entity';
+import { Racket } from './entities/racket.entity';
+import { RacketRental } from './entities/racket-rental.entity';
 import { UsersModule } from './modules/users/users.module';
 import { VenuesModule } from './modules/venues/venues.module';
 import { ChatModule } from './modules/chat/chat.module';
@@ -27,6 +30,9 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ProductsModule } from './modules/products/products.module';
+import { RacketsModule } from './modules/rackets/rackets.module';
+import { RacketRentalsModule } from './modules/racket-rentals/racket-rentals.module';
 
 // normalize environment values (strip accidental surrounding quotes like "password")
 @Module({
@@ -38,7 +44,7 @@ import { AuthModule } from './modules/auth/auth.module';
       inject: [ConfigService],
       useFactory: (cfg: ConfigService): TypeOrmModuleOptions => {
         const skip = (process.env.SKIP_DB ?? cfg.get('SKIP_DB')) === 'true';
-        const entities = [User, Location, Court, TimeSlot, Booking, Review, Setting, Payment, Venue, ChatConversation, ChatMessage];
+        const entities = [User, Location, Court, TimeSlot, Booking, Review, Setting, Payment, Venue, ChatConversation, ChatMessage, Product, Racket, RacketRental];
 
         const trimQuotes = (s?: string) =>
           (s || '').replace(/^\s*"(.*)"\s*$/, '$1').replace(/^\s*'(.*)'\s*$/, '$1');
@@ -76,6 +82,9 @@ import { AuthModule } from './modules/auth/auth.module';
     PaymentsModule,
     AuthModule,
     ChatModule,
+    ProductsModule,
+    RacketsModule,
+    RacketRentalsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

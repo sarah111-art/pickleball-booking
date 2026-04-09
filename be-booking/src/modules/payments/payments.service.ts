@@ -16,6 +16,13 @@ export class PaymentsService {
     private configService: ConfigService,
   ) {}
 
+  findAll() {
+    return this.payments.find({
+      relations: ['booking', 'booking.user', 'booking.court'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   async createOrder(bookingId: string, provider: string = 'qr') {
     const booking = await this.bookings.findOne({ 
       where: { id: bookingId },

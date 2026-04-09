@@ -12,6 +12,10 @@ export class ReviewsService {
     return this.repo.save(e);
   }
 
+  findAll() {
+    return this.repo.find({ relations: ['user', 'court'], order: { createdAt: 'DESC' } });
+  }
+
   findByCourt(courtId: string) {
     return this.repo.find({ where: { court: { id: courtId } }, relations: ['user'] });
   }

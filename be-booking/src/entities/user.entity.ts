@@ -22,6 +22,12 @@ export class User {
   @Column({ type: 'varchar', default: 'user' })
   role: UserRole;
 
+  @Column({ type: 'json', nullable: true })
+  permissions?: Array<{ section: string; level: 'full' | 'add' | 'view' | 'edit' | 'delete' }>;
+
+  @Column({ name: 'is_active', default: true })
+  isActive: boolean;
+
   @Column({ name: 'reset_token', nullable: true })
   resetToken?: string;
 

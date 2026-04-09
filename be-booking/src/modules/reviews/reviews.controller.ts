@@ -6,6 +6,11 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class ReviewsController {
   constructor(private svc: ReviewsService) {}
 
+  @Get()
+  findAll() {
+    return this.svc.findAll();
+  }
+
   @UseGuards(JwtAuthGuard)
   @Post()
   create(@Body() body: any) {

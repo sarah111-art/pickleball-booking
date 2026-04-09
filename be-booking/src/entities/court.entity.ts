@@ -1,5 +1,6 @@
 import { Column, CreateDateColumn, Entity, ManyToOne, JoinColumn, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { Venue } from './venue.entity';
+import { Location } from './location.entity';
 
 @Entity('courts')
 export class Court {
@@ -31,6 +32,25 @@ export class Court {
     }
   }})
   images?: string[];
+
+  @Column({ name: 'location_id', nullable: true })
+  locationId: string;
+
+  @ManyToOne(() => Location, { nullable: true })
+  @JoinColumn({ name: 'location_id' })
+  location?: Location;
+
+  @Column({ nullable: true })
+  province?: string;
+
+  @Column({ nullable: true })
+  district?: string;
+
+  @Column({ nullable: true })
+  ward?: string;
+
+  @Column({ nullable: true })
+  address?: string;
 
   @Column({ name: 'venue_id', nullable: true })
   venueId: string;

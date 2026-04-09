@@ -36,6 +36,10 @@ export class TimeSlotsService {
     return qb.getMany();
   }
 
+  findAll() {
+    return this.repo.find({ relations: ['court'], order: { date: 'DESC', start: 'ASC' } });
+  }
+
   async remove(id: string) {
     const e = await this.repo.findOne({ where: { id } });
     if (!e) throw new NotFoundException('TimeSlot not found');

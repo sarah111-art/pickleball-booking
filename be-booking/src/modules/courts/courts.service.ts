@@ -29,9 +29,11 @@ export class CourtsService {
 
   findAll(query?: Record<string, any>) {
     const qb = this.repo.createQueryBuilder('court')
-      .leftJoinAndSelect('court.venue', 'venue');
+      .leftJoinAndSelect('court.venue', 'venue')
+      .leftJoinAndSelect('court.location', 'location');
 
     if (query?.venueId) qb.andWhere('court.venueId = :venueId', { venueId: query.venueId });
+    if (query?.locationId) qb.andWhere('court.locationId = :locationId', { locationId: query.locationId });
     if (query?.minPrice) qb.andWhere('court.pricePerHour >= :min', { min: query.minPrice });
     if (query?.maxPrice) qb.andWhere('court.pricePerHour <= :max', { max: query.maxPrice });
     if (query?.isActive !== undefined) qb.andWhere('court.isActive = :active', { active: Boolean(query.isActive) });

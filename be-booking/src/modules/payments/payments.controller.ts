@@ -6,6 +6,11 @@ import { PaymentsService } from './payments.service';
 export class PaymentsController {
   constructor(private svc: PaymentsService) {}
 
+  @Get()
+  findAll() {
+    return this.svc.findAll();
+  }
+
   @Post('create')
   create(@Body() body: any) {
     return this.svc.createOrder(body.bookingId, body.provider);

@@ -17,16 +17,9 @@ async function bootstrap() {
 
   // Enable CORS for frontend
   app.enableCors({
-    origin: [
-      'http://localhost:5173', 
-      'http://localhost:8080',
-      // Allow VNPay to call IPN endpoint
-      'https://sandbox.vnpayment.vn',
-      'https://vnpayment.vn',
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    origin: true, // cho phép tất cả origin (dev)
     credentials: true,
-    // Allow all headers for VNPay
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
 
