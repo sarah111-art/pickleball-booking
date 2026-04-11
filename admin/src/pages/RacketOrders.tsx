@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
+import { useAuth } from '@/hooks/use-auth';
 
 interface OrderItem {
   racketId: string;
@@ -56,6 +57,7 @@ const formatPrice = (amount: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(amount || 0));
 
 const RacketOrders = () => {
+  const { hasPermission } = useAuth();
   const [orders, setOrders] = useState<RacketOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -63,6 +65,8 @@ const RacketOrders = () => {
   const [keyword, setKeyword] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<RacketOrder | null>(null);
   const [showDetail, setShowDetail] = useState(false);
+
+  const canEdit = hasPermission('racket_orders', 'edit');
 
   async function fetchOrders() {
     setLoading(true);
@@ -103,6 +107,10 @@ const RacketOrders = () => {
   };
 
   const updateOrder = async (patch: Partial<RacketOrder>) => {
+    if (!canEdit) {
+      alert('Bạn không có quyền cập nhật đơn vợt');
+      return;
+    }
     if (!selectedOrder) return;
     setSaving(true);
     const { data, error: err } = await api.put<RacketOrder>(`/racket-orders/${selectedOrder.id}`, patch);
@@ -218,7 +226,7 @@ const RacketOrders = () => {
                 <select
                   value={selectedOrder.orderStatus}
                   onChange={(e) => updateOrder({ orderStatus: e.target.value as RacketOrder['orderStatus'] })}
-                  disabled={saving}
+                  disabled={saving || !canEdit}
                   className="w-full border rounded-lg px-3 py-2"
                 >
                   {orderStatusOptions.map((status) => (
@@ -230,7 +238,7 @@ const RacketOrders = () => {
                 <select
                   value={selectedOrder.paymentStatus}
                   onChange={(e) => updateOrder({ paymentStatus: e.target.value as RacketOrder['paymentStatus'] })}
-                  disabled={saving}
+                  disabled={saving || !canEdit}
                   className="w-full border rounded-lg px-3 py-2"
                 >
                   {paymentStatusOptions.map((status) => (

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { X, Trash2, Edit2 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 interface Racket {
   id: string;
@@ -20,6 +21,7 @@ interface RacketRental {
 }
 
 const RacketRentals = () => {
+  const { hasPermission } = useAuth();
   const [rentals, setRentals] = useState<RacketRental[]>([]);
   const [rackets, setRackets] = useState<Racket[]>([]);
   const [loading, setLoading] = useState(false);
@@ -38,6 +40,10 @@ const RacketRentals = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const canAdd = hasPermission("racket_rentals", "add");
+  const canEdit = hasPermission("racket_rentals", "edit");
+  const canDelete = hasPermission("racket_rentals", "delete");
 
   const fetchData = async () => {
     setLoading(true);
@@ -60,16 +66,17 @@ const RacketRentals = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('handleSave called, formData:', formData);
+    if ((editingId && !canEdit) || (!editingId && !canAdd)) {
+      setError("Bạn không có quyền thực hiện thao tác này");
+      return;
+    }
     if (!formData.racketId || formData.rentalPrice <= 0 || formData.durationHours <= 0) {
       setError("Vui lòng điền đầy đủ thông tin");
       return;
     }
 
     if (editingId) {
-      console.log('Sending PUT to /racket-rentals/' + editingId, 'payload:', formData);
       const { error: err } = await api.put(`/racket-rentals/${editingId}`, formData);
-      console.log('PUT response, error:', err);
       if (err) {
         setError(err);
       } else {
@@ -91,6 +98,10 @@ const RacketRentals = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canDelete) {
+      setError("Bạn không có quyền xóa cấu hình thuê vợt");
+      return;
+    }
     if (!confirm("Xác nhận xóa cho thuê vợt này?")) return;
     const { error: err } = await api.delete(`/racket-rentals/${id}`);
     if (err) {
@@ -101,7 +112,10 @@ const RacketRentals = () => {
   };
 
   const handleEdit = (rental: RacketRental) => {
-    console.log('handleEdit called, rental:', rental);
+    if (!canEdit) {
+      setError("Bạn không có quyền chỉnh sửa cấu hình thuê vợt");
+      return;
+    }
     setEditingId(rental.id);
     setFormData({
       racketId: rental.racketId || rental.racket?.id || "",
@@ -133,15 +147,17 @@ const RacketRentals = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Quản lý Cho Thuê Vợt</h1>
-        <button
-          onClick={() => {
-            resetForm();
-            setShowModal(true);
-          }}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          + Thêm Cấu Hình Thuê
-        </button>
+        {canAdd && (
+          <button
+            onClick={() => {
+              resetForm();
+              setShowModal(true);
+            }}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            + Thêm Cấu Hình Thuê
+          </button>
+        )}
       </div>
 
       {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">{error}</div>}
@@ -174,14 +190,20 @@ const RacketRentals = () => {
                     </span>
                   </td>
                   <td className="border p-3">
-                    <div className="flex gap-2">
-                      <button onClick={() => handleEdit(rental)} className="p-1 text-blue-600 hover:bg-blue-100 rounded">
-                        <Edit2 size={18} />
-                      </button>
-                      <button onClick={() => handleDelete(rental.id)} className="p-1 text-red-600 hover:bg-red-100 rounded">
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
+                    {(canEdit || canDelete) && (
+                      <div className="flex gap-2">
+                        {canEdit && (
+                          <button onClick={() => handleEdit(rental)} className="p-1 text-blue-600 hover:bg-blue-100 rounded">
+                            <Edit2 size={18} />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button onClick={() => handleDelete(rental.id)} className="p-1 text-red-600 hover:bg-red-100 rounded">
+                            <Trash2 size={18} />
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

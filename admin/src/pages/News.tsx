@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { uploadImageToCloudinary } from '@/lib/upload-image';
+import { useAuth } from '@/hooks/use-auth';
 
 interface BlogPost {
   id: string;
@@ -32,6 +33,7 @@ const emptyForm = {
 };
 
 const News = () => {
+  const { hasPermission } = useAuth();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +44,10 @@ const News = () => {
   const [search, setSearch] = useState('');
 
   const [formData, setFormData] = useState(emptyForm);
+
+  const canAdd = hasPermission('news', 'add');
+  const canEdit = hasPermission('news', 'edit');
+  const canDelete = hasPermission('news', 'delete');
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -70,6 +76,10 @@ const News = () => {
   }, [posts, search]);
 
   const openCreate = () => {
+    if (!canAdd) {
+      setError('Bạn không có quyền tạo bài viết');
+      return;
+    }
     setEditingId(null);
     setFormData(emptyForm);
     setError(null);
@@ -77,6 +87,10 @@ const News = () => {
   };
 
   const openEdit = (post: BlogPost) => {
+    if (!canEdit) {
+      setError('Bạn không có quyền chỉnh sửa bài viết');
+      return;
+    }
     setEditingId(post.id);
     setFormData({
       title: post.title,
@@ -109,6 +123,10 @@ const News = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if ((editingId && !canEdit) || (!editingId && !canAdd)) {
+      setError('Bạn không có quyền thực hiện thao tác này');
+      return;
+    }
     if (!formData.title.trim() || !formData.content.trim()) {
       setError('Tiêu đề và nội dung là bắt buộc');
       return;
@@ -138,6 +156,10 @@ const News = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canDelete) {
+      setError('Bạn không có quyền xóa bài viết');
+      return;
+    }
     if (!confirm('Bạn chắc chắn muốn xóa bài viết này?')) return;
     const { error: err } = await api.delete(`/blog-posts/${id}`);
     if (err) {
@@ -155,9 +177,11 @@ const News = () => {
           <h1 className="text-3xl font-bold">Quản Lý Tin Tức SEO</h1>
           <p className="text-muted-foreground">Tạo bài viết chuẩn SEO và đánh dấu bài nổi bật cho trang chủ</p>
         </div>
-        <button onClick={openCreate} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-          + Tạo Bài Viết
-        </button>
+        {canAdd && (
+          <button onClick={openCreate} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+            + Tạo Bài Viết
+          </button>
+        )}
       </div>
 
       <input
@@ -197,8 +221,8 @@ const News = () => {
                     <td className="px-3 py-2">{post.isFeatured ? 'Có' : 'Không'}</td>
                     <td className="px-3 py-2">{new Date(post.createdAt).toLocaleDateString('vi-VN')}</td>
                     <td className="px-3 py-2 text-right space-x-2">
-                      <button onClick={() => openEdit(post)} className="px-3 py-1 rounded border hover:bg-gray-50">Sửa</button>
-                      <button onClick={() => handleDelete(post.id)} className="px-3 py-1 rounded border text-red-600 hover:bg-red-50">Xóa</button>
+                      {canEdit && <button onClick={() => openEdit(post)} className="px-3 py-1 rounded border hover:bg-gray-50">Sửa</button>}
+                      {canDelete && <button onClick={() => handleDelete(post.id)} className="px-3 py-1 rounded border text-red-600 hover:bg-red-50">Xóa</button>}
                     </td>
                   </tr>
                 ))

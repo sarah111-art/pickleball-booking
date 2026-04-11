@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 import { X, Trash2 } from "lucide-react";
 import { vietnamProvinces, getDistrictsByProvince, getWardsByDistrict } from "@/lib/vietnamProvinces";
 import { uploadImageToCloudinary } from "@/lib/upload-image";
+import { useAuth } from "@/hooks/use-auth";
 
 interface Location {
   id: string;
@@ -27,6 +28,7 @@ interface Court {
 }
 
 const Courts = () => {
+  const { hasPermission } = useAuth();
   const [courts, setCourts] = useState<Court[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
@@ -53,6 +55,10 @@ const Courts = () => {
     fetchLocations();
   }, []);
 
+  const canAdd = hasPermission("courts", "add");
+  const canEdit = hasPermission("courts", "edit");
+  const canDelete = hasPermission("courts", "delete");
+
   const fetchCourts = async () => {
     setLoading(true);
     const { data, error: err } = await api.get<Court[]>("/courts");
@@ -72,6 +78,10 @@ const Courts = () => {
   };
 
   const handleOpenEdit = (court: Court) => {
+    if (!canEdit) {
+      setError("Bạn không có quyền chỉnh sửa sân");
+      return;
+    }
     setEditCourtId(court.id);
     setFormData({
       courtName: court.courtName,
@@ -88,6 +98,10 @@ const Courts = () => {
   };
 
   const handleOpenCreate = () => {
+    if (!canAdd) {
+      setError("Bạn không có quyền tạo sân");
+      return;
+    }
     setEditCourtId(null);
     setFormData({
       courtName: "",
@@ -105,6 +119,10 @@ const Courts = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if ((editCourtId && !canEdit) || (!editCourtId && !canAdd)) {
+      setError("Bạn không có quyền thực hiện thao tác này");
+      return;
+    }
     if (!formData.courtName) {
       setError("Vui lòng nhập tên sân");
       return;
@@ -151,6 +169,10 @@ const Courts = () => {
   };
 
   const handleDeleteCourt = async (courtId: string) => {
+    if (!canDelete) {
+      setError("Bạn không có quyền xóa sân");
+      return;
+    }
     if (!confirm("Bạn chắc chắn muốn xóa sân này?")) return;
 
     setDeleting(true);
@@ -181,12 +203,14 @@ const Courts = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Quản lý Sân</h1>
-        <button
-          onClick={handleOpenCreate}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-        >
-          + Tạo Sân
-        </button>
+        {canAdd && (
+          <button
+            onClick={handleOpenCreate}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+          >
+            + Tạo Sân
+          </button>
+        )}
       </div>
 
       {error && (
@@ -250,23 +274,29 @@ const Courts = () => {
                       </p>
                     )}
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <button
-                      onClick={() => handleOpenEdit(court)}
-                      className="p-2 hover:bg-blue-100 rounded transition text-blue-600 flex-shrink-0"
-                      title="Chỉnh sửa"
-                    >
-                      Sửa
-                    </button>
-                    <button
-                      onClick={() => handleDeleteCourt(court.id)}
-                      disabled={deleting}
-                      className="p-2 hover:bg-red-100 rounded transition text-red-600 flex-shrink-0"
-                      title="Xóa"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
+                  {(canEdit || canDelete) && (
+                    <div className="flex flex-col gap-2">
+                      {canEdit && (
+                        <button
+                          onClick={() => handleOpenEdit(court)}
+                          className="p-2 hover:bg-blue-100 rounded transition text-blue-600 flex-shrink-0"
+                          title="Chỉnh sửa"
+                        >
+                          Sửa
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          onClick={() => handleDeleteCourt(court.id)}
+                          disabled={deleting}
+                          className="p-2 hover:bg-red-100 rounded transition text-red-600 flex-shrink-0"
+                          title="Xóa"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

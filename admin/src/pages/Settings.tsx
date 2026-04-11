@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 import { Clock, Save, ToggleLeft, ToggleRight, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { uploadImageToCloudinary } from "@/lib/upload-image";
+import { useAuth } from "@/hooks/use-auth";
 
 interface BusinessHourDay {
   day: number;
@@ -40,6 +41,7 @@ const DEFAULT_HOURS: BusinessHourDay[] = [
 ];
 
 const Settings = () => {
+  const { hasPermission } = useAuth();
   const [settings, setSettings] = useState<SettingsData>({
     fee: 0,
     policy: "",
@@ -60,6 +62,8 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingHeroImage, setUploadingHeroImage] = useState(false);
+
+  const canEdit = hasPermission("settings", "edit");
 
   useEffect(() => {
     fetchSettings();
@@ -90,6 +94,10 @@ const Settings = () => {
   };
 
   const handleSave = async () => {
+    if (!canEdit) {
+      alert("Bạn không có quyền cập nhật cài đặt hệ thống");
+      return;
+    }
     setSaving(true);
     const res = await api.put("/settings", settings);
     if (res.data) {
@@ -101,6 +109,10 @@ const Settings = () => {
   };
 
   const handleHeroImageUpload = async (file?: File) => {
+    if (!canEdit) {
+      alert("Bạn không có quyền cập nhật cài đặt hệ thống");
+      return;
+    }
     if (!file) return;
     setUploadingHeroImage(true);
     try {
@@ -135,7 +147,7 @@ const Settings = () => {
         </div>
         <button
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || !canEdit}
           className="flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all disabled:opacity-60"
         >
           <Save className="w-4 h-4" />

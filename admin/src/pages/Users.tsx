@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { X, Trash2, Edit2 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 interface User {
   id: string;
@@ -12,6 +13,7 @@ interface User {
 }
 
 const Users = () => {
+  const { hasPermission } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +36,10 @@ const Users = () => {
     fetchUsers();
   }, []);
 
+  const canAdd = hasPermission("users", "add");
+  const canEdit = hasPermission("users", "edit");
+  const canDelete = hasPermission("users", "delete");
+
   const fetchUsers = async () => {
     setLoading(true);
     const { data, error: err } = await api.get<User[]>("/users");
@@ -47,6 +53,10 @@ const Users = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if ((editingId && !canEdit) || (!editingId && !canAdd)) {
+      setError("Bạn không có quyền thực hiện thao tác này");
+      return;
+    }
     if (!formData.email) {
       setError("Email là bắt buộc");
       return;
@@ -74,6 +84,10 @@ const Users = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canDelete) {
+      setError("Bạn không có quyền xóa người dùng");
+      return;
+    }
     if (!confirm("Xác nhận xóa người dùng?")) return;
     const { error: err } = await api.delete(`/users/${id}`);
     if (err) {
@@ -84,6 +98,10 @@ const Users = () => {
   };
 
   const handleEdit = (user: User) => {
+    if (!canEdit) {
+      setError("Bạn không có quyền chỉnh sửa người dùng");
+      return;
+    }
     setEditingId(user.id);
     setFormData({
       email: user.email,
@@ -103,15 +121,17 @@ const Users = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Quản lý Người Dùng</h1>
-        <button
-          onClick={() => {
-            resetForm();
-            setShowModal(true);
-          }}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          + Thêm Người Dùng
-        </button>
+        {canAdd && (
+          <button
+            onClick={() => {
+              resetForm();
+              setShowModal(true);
+            }}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            + Thêm Người Dùng
+          </button>
+        )}
       </div>
 
       {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">{error}</div>}
@@ -140,18 +160,22 @@ const Users = () => {
                     <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">{user.role}</span>
                   </td>
                   <td className="p-3 text-center space-x-2">
-                    <button
-                      onClick={() => handleEdit(user)}
-                      className="p-1 text-blue-600 hover:bg-blue-100 rounded inline-block"
-                    >
-                      <Edit2 size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(user.id)}
-                      className="p-1 text-red-600 hover:bg-red-100 rounded inline-block"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => handleEdit(user)}
+                        className="p-1 text-blue-600 hover:bg-blue-100 rounded inline-block"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={() => handleDelete(user.id)}
+                        className="p-1 text-red-600 hover:bg-red-100 rounded inline-block"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

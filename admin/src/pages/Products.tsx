@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { X, Trash2, Edit2 } from "lucide-react";
 import { uploadImageToCloudinary } from "@/lib/upload-image";
+import { useAuth } from "@/hooks/use-auth";
 
 interface Product {
   id: string;
@@ -15,6 +16,7 @@ interface Product {
 }
 
 const Products = () => {
+  const { hasPermission } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +46,10 @@ const Products = () => {
     fetchProducts();
   }, []);
 
+  const canAdd = hasPermission("products", "add");
+  const canEdit = hasPermission("products", "edit");
+  const canDelete = hasPermission("products", "delete");
+
   const fetchProducts = async () => {
     setLoading(true);
     const { data, error: err } = await api.get<Product[]>("/products");
@@ -57,6 +63,10 @@ const Products = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if ((editingId && !canEdit) || (!editingId && !canAdd)) {
+      setError("Bạn không có quyền thực hiện thao tác này");
+      return;
+    }
     if (!formData.name || formData.price <= 0) {
       setError("Vui lòng điền đầy đủ thông tin");
       return;
@@ -84,6 +94,10 @@ const Products = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canDelete) {
+      setError("Bạn không có quyền xóa sản phẩm");
+      return;
+    }
     if (!confirm("Xác nhận xóa sản phẩm?")) return;
     const { error: err } = await api.delete(`/products/${id}`);
     if (err) {
@@ -108,6 +122,10 @@ const Products = () => {
   };
 
   const handleEdit = (product: Product) => {
+    if (!canEdit) {
+      setError("Bạn không có quyền chỉnh sửa sản phẩm");
+      return;
+    }
     setEditingId(product.id);
     setFormData({
       name: product.name,
@@ -148,15 +166,17 @@ const Products = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Quản lý Sản Phẩm Đi Kèm</h1>
-        <button
-          onClick={() => {
-            resetForm();
-            setShowModal(true);
-          }}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          + Thêm Sản Phẩm
-        </button>
+        {canAdd && (
+          <button
+            onClick={() => {
+              resetForm();
+              setShowModal(true);
+            }}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            + Thêm Sản Phẩm
+          </button>
+        )}
       </div>
 
       {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">{error}</div>}
@@ -186,20 +206,26 @@ const Products = () => {
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => handleEdit(product)}
-                    className="p-1 text-blue-600 hover:bg-blue-100 rounded"
-                  >
-                    <Edit2 size={18} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(product.id)}
-                    className="p-1 text-red-600 hover:bg-red-100 rounded"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
+                {(canEdit || canDelete) && (
+                  <div className="flex gap-1">
+                    {canEdit && (
+                      <button
+                        onClick={() => handleEdit(product)}
+                        className="p-1 text-blue-600 hover:bg-blue-100 rounded"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={() => handleDelete(product.id)}
+                        className="p-1 text-red-600 hover:bg-red-100 rounded"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           ))}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Trash2, Star } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 interface Review {
   id: string;
@@ -17,6 +18,7 @@ interface Review {
 }
 
 const Reviews = () => {
+  const { hasPermission } = useAuth();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +27,8 @@ const Reviews = () => {
   useEffect(() => {
     fetchReviews();
   }, []);
+
+  const canDelete = hasPermission("reviews", "delete");
 
   const fetchReviews = async () => {
     setLoading(true);
@@ -38,6 +42,10 @@ const Reviews = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canDelete) {
+      setError("Bạn không có quyền xóa đánh giá");
+      return;
+    }
     if (!confirm("Xác nhận xóa đánh giá?")) return;
     const { error: err } = await api.delete(`/reviews/${id}`);
     if (err) {
@@ -132,12 +140,14 @@ const Reviews = () => {
                     {new Date(review.createdAt).toLocaleString("vi-VN")}
                   </p>
                 </div>
-                <button
-                  onClick={() => handleDelete(review.id)}
-                  className="p-2 text-red-600 hover:bg-red-100 rounded"
-                >
-                  <Trash2 size={18} />
-                </button>
+                {canDelete && (
+                  <button
+                    onClick={() => handleDelete(review.id)}
+                    className="p-2 text-red-600 hover:bg-red-100 rounded"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                )}
               </div>
             </div>
           ))}
