@@ -56,14 +56,14 @@ const Hero = () => {
             {heroDescription}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-200">
-            <Link to="/booking">
-              <Button size="lg" variant="secondary" className="text-lg px-8 py-6 shadow-lg hover:shadow-xl transition-all hover:scale-105">
+            <Link to="/booking" className="w-full sm:w-[260px]">
+              <Button size="lg" variant="secondary" className="w-full justify-center text-lg px-8 py-6 shadow-lg hover:shadow-xl transition-all hover:scale-105">
                 <Calendar className="mr-2" />
                 Đặt Sân Ngay
               </Button>
             </Link>
-            <Link to="/schedule">
-              <Button size="lg" variant="outline" className="text-lg px-8 py-6 bg-background/10 backdrop-blur-sm border-2 border-primary-foreground hover:bg-primary-foreground hover:text-primary transition-all">
+            <Link to="/schedule" className="w-full sm:w-[260px]">
+              <Button size="lg" variant="outline" className="w-full justify-center text-lg px-8 py-6 bg-background/10 backdrop-blur-sm border-2 border-primary-foreground hover:bg-primary-foreground hover:text-primary transition-all">
                 <Clock className="mr-2" />
                 Xem Giá & Lịch
               </Button>

@@ -17,19 +17,30 @@ import { RacketRental } from '../entities/racket-rental.entity';
 import { RacketOrder } from '../entities/racket-order.entity';
 import { BlogPost } from '../entities/blog-post.entity';
 
-config();
+// Load .env only as fallback; environment variables set before this script take priority
+config({ override: false });
 
 const trimQuotes = (s?: string) =>
   (s || '').replace(/^\s*"(.*)"\s*$/, '$1').replace(/^\s*'(.*)'\s*$/, '$1');
 
-export default new DataSource({
-  type: 'mysql',
-  host: trimQuotes(process.env.DB_HOST || 'localhost'),
-  port: parseInt(process.env.DB_PORT || '3306', 10),
-  username: trimQuotes(process.env.DB_USER || process.env.DB_USERNAME || 'root'),
-  password: trimQuotes(process.env.DB_PASSWORD || ''),
-  database: trimQuotes(process.env.DB_NAME || process.env.DB_DATABASE || 'pickleball'),
-  entities: [User, Location, Court, Booking, Review, Setting, Payment, Venue, ChatConversation, ChatMessage, Product, Racket, RacketRental, RacketOrder, BlogPost],
-  migrations: [__dirname + '/1*'],
-  synchronize: false,
-});
+const databaseUrl = process.env.DATABASE_URL ?? process.env.MYSQL_URL;
+
+export default databaseUrl
+  ? new DataSource({
+      type: 'mysql',
+      url: databaseUrl,
+      entities: [User, Location, Court, Booking, Review, Setting, Payment, Venue, ChatConversation, ChatMessage, Product, Racket, RacketRental, RacketOrder, BlogPost],
+      migrations: [__dirname + '/1*'],
+      synchronize: false,
+    })
+  : new DataSource({
+      type: 'mysql',
+      host: trimQuotes(process.env.DB_HOST || 'localhost'),
+      port: parseInt(process.env.DB_PORT || '3306', 10),
+      username: trimQuotes(process.env.DB_USER || process.env.DB_USERNAME || 'root'),
+      password: trimQuotes(process.env.DB_PASSWORD || ''),
+      database: trimQuotes(process.env.DB_NAME || process.env.DB_DATABASE || 'pickleball'),
+      entities: [User, Location, Court, Booking, Review, Setting, Payment, Venue, ChatConversation, ChatMessage, Product, Racket, RacketRental, RacketOrder, BlogPost],
+      migrations: [__dirname + '/1*'],
+      synchronize: false,
+    });
