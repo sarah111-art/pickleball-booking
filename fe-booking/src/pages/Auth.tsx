@@ -118,8 +118,8 @@ const Auth = () => {
       className="relative min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat p-4"
       style={{ backgroundImage: `url(${backgroundImage})` }}
     >
-      <div className="absolute inset-0 bg-black/45" />
-      <Card className="relative z-10 w-full max-w-md shadow-lg bg-card/95 backdrop-blur-sm">
+      <div className="absolute inset-0 bg-black/25" />
+      <Card className="relative z-10 w-full max-w-md shadow-2xl bg-card/82 backdrop-blur-md border border-white/15">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Sân Pickleball</CardTitle>
           <CardDescription className="text-center">

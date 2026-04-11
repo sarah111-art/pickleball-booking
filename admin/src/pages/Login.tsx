@@ -56,8 +56,8 @@ const Login = () => {
       className="relative min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: `url(${backgroundImage})` }}
     >
-      <div className="absolute inset-0 bg-black/45" />
-      <form onSubmit={handleSubmit} className="relative z-10 bg-card/95 backdrop-blur-sm p-6 rounded-md shadow-md w-full max-w-sm">
+      <div className="absolute inset-0 bg-black/25" />
+      <form onSubmit={handleSubmit} className="relative z-10 bg-card/82 backdrop-blur-md p-6 rounded-xl shadow-2xl border border-white/15 w-full max-w-sm">
         <h2 className="text-lg font-bold mb-4">Đăng nhập</h2>
         {error && (
           <div className="mb-3 bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded text-sm">
