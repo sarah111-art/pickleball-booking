@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -8,6 +8,8 @@ import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private usersService: UsersService,
     private jwt: JwtService,
@@ -30,7 +32,7 @@ export class AuthService {
     const fromEmail = this.configService.get<string>('MAIL_FROM') ?? smtpUser;
 
     if (!smtpHost || !smtpUser || !smtpPass || !fromEmail) {
-      // Keep flow usable on environments without SMTP; FE still receives success message.
+      this.logger.warn('SMTP is not fully configured, skip sending reset email');
       return;
     }
 
@@ -151,7 +153,10 @@ export class AuthService {
 
   async forgotPassword(email: string) {
     const user = await this.usersService.findByEmail(email);
-    if (!user) return { ok: true };
+    if (!user) {
+      this.logger.log(`Forgot password requested for non-existent email: ${email}`);
+      return { ok: true };
+    }
 
     const token = this.jwt.sign(
       { sub: user.id, type: 'password_reset' },
@@ -163,7 +168,16 @@ export class AuthService {
 
     await this.usersService.update(user.id, { resetToken: token });
     // Do not block API response on SMTP latency/timeouts.
-    void this.sendResetEmail(user.email, resetLink).catch(() => undefined);
+    void this.sendResetEmail(user.email, resetLink)
+      .then(() => {
+        this.logger.log(`Reset password email queued for: ${user.email}`);
+      })
+      .catch((err: unknown) => {
+        this.logger.error(
+          `Failed to send reset password email for ${user.email}`,
+          err instanceof Error ? err.stack : String(err),
+        );
+      });
 
     return { ok: true };
   }
