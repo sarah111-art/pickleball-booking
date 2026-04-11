@@ -3,11 +3,14 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Enable pnpm via Corepack
+RUN corepack enable
+
 # Copy package files
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml ./
 
 # Install all dependencies (including devDependencies)
-RUN npm install --legacy-peer-deps
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
@@ -16,5 +19,5 @@ COPY . .
 EXPOSE 3000
 
 # Start with hot reload using nest start --watch
-CMD ["npm", "run", "start:dev"]
+CMD ["pnpm", "run", "start:dev"]
 
