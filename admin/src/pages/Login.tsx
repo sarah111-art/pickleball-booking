@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 
 const Login = () => {
   const backgroundImage =
-    'https://assets.grok.com/users/fcb04fb2-dedc-419c-b994-c38a81f11208/generated/37dd98d9-d0b6-490d-a1f5-4ed1dcac5186/image.jpg';
+    'https://res.cloudinary.com/di7d0xja0/image/upload/v1775892247/bg-01_peolxq.jpg';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -56,8 +56,8 @@ const Login = () => {
       className="relative min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: `url(${backgroundImage})` }}
     >
-      <div className="absolute inset-0 bg-black/25" />
-      <form onSubmit={handleSubmit} className="relative z-10 bg-card/82 backdrop-blur-md p-6 rounded-xl shadow-2xl border border-white/15 w-full max-w-sm">
+      <div className="absolute inset-0 bg-black/10" />
+      <form onSubmit={handleSubmit} className="relative z-10 bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
         <h2 className="text-lg font-bold mb-4">Đăng nhập</h2>
         {error && (
           <div className="mb-3 bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded text-sm">

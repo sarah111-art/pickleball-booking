@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 const Auth = () => {
   const backgroundImage =
-    "https://assets.grok.com/users/fcb04fb2-dedc-419c-b994-c38a81f11208/generated/37dd98d9-d0b6-490d-a1f5-4ed1dcac5186/image.jpg";
+    "https://res.cloudinary.com/di7d0xja0/image/upload/v1775892247/bg-01_peolxq.jpg";
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -118,8 +118,8 @@ const Auth = () => {
       className="relative min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat p-4"
       style={{ backgroundImage: `url(${backgroundImage})` }}
     >
-      <div className="absolute inset-0 bg-black/25" />
-      <Card className="relative z-10 w-full max-w-md shadow-2xl bg-card/82 backdrop-blur-md border border-white/15">
+      <div className="absolute inset-0 bg-black/10" />
+      <Card className="relative z-10 w-full max-w-md shadow-2xl bg-white border-0">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Sân Pickleball</CardTitle>
           <CardDescription className="text-center">
