@@ -82,7 +82,7 @@ const PaymentSuccess = () => {
             courtName: (data as any).court?.courtName || "N/A",
             venueName: (data as any).court?.address || "N/A", // Venue info might be in court
             date: data.date,
-            timeSlots: (data as any).slot ? [{ start: (data as any).slot.start, end: (data as any).slot.end, price: parseFloat(data.total) }] : [],
+            timeSlots: (data as any).slot ? [{ start: (data as any).slot.start, end: (data as any).slot.end, price: parseFloat(data.total ?? "0") }] : [],
             courtTotal: parseFloat(data.courtPrice || "0"),
             productTotal: parseFloat(data.productPrice || "0"),
             rentalTotal: parseFloat(data.rentalPrice || "0"),
