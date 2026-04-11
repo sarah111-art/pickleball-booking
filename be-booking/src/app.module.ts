@@ -49,7 +49,14 @@ import { BlogPostsModule } from './modules/blog-posts/blog-posts.module';
         const entities = [User, Location, Court, Booking, Review, Setting, Payment, Venue, ChatConversation, ChatMessage, Product, Racket, RacketRental, RacketOrder, BlogPost];
 
         const trimQuotes = (s?: string) =>
-          (s || '').replace(/^\s*"(.*)"\s*$/, '$1').replace(/^\s*'(.*)'\s*$/, '$1');
+          (s || '').replace(/^\s*"(.*)"\s*$/, '$1').replace(/^\s*'(.*)'\s*$/, '$1').trim();
+
+        const databaseUrl = trimQuotes(
+          cfg.get<string>('DATABASE_URL') ??
+            cfg.get<string>('MYSQL_PUBLIC_URL') ??
+            cfg.get<string>('MYSQL_URL') ??
+            cfg.get<string>('DATABASE_PUBLIC_URL'),
+        );
 
         if (skip) {
           return {
@@ -60,13 +67,22 @@ import { BlogPostsModule } from './modules/blog-posts/blog-posts.module';
           };
         }
 
+        if (databaseUrl) {
+          return {
+            type: 'mysql' as const,
+            url: databaseUrl,
+            entities,
+            synchronize: true,
+          };
+        }
+
         return {
           type: 'mysql' as const,
           host: (cfg.get<string>('DB_HOST') ?? cfg.get<string>('MYSQLHOST') ?? 'localhost') as string,
           port: Number(cfg.get('DB_PORT') ?? cfg.get('MYSQLPORT') ?? 3306),
           username: (cfg.get<string>('DB_USERNAME') ?? cfg.get<string>('DB_USER') ?? cfg.get<string>('MYSQLUSER') ?? 'root') as string,
           password: trimQuotes(cfg.get<string>('DB_PASSWORD') ?? cfg.get<string>('MYSQLPASSWORD')),
-          database: (cfg.get<string>('DB_DATABASE') ?? cfg.get<string>('DB_NAME') ?? 'pickleball_booking') as string,
+          database: (cfg.get<string>('DB_DATABASE') ?? cfg.get<string>('DB_NAME') ?? cfg.get<string>('MYSQLDATABASE') ?? 'pickleball_booking') as string,
           entities,
           synchronize: true,
         };
