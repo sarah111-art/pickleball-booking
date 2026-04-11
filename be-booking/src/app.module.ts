@@ -62,10 +62,10 @@ import { BlogPostsModule } from './modules/blog-posts/blog-posts.module';
 
         return {
           type: 'mysql' as const,
-          host: cfg.get('DB_HOST') ?? 'localhost',
-          port: Number(cfg.get('DB_PORT') ?? 3306),
-          username: cfg.get('DB_USERNAME') ?? 'root',
-          password: trimQuotes(cfg.get<string>('DB_PASSWORD')),
+          host: (cfg.get<string>('DB_HOST') ?? cfg.get<string>('MYSQLHOST') ?? 'localhost') as string,
+          port: Number(cfg.get('DB_PORT') ?? cfg.get('MYSQLPORT') ?? 3306),
+          username: (cfg.get<string>('DB_USERNAME') ?? cfg.get<string>('DB_USER') ?? cfg.get<string>('MYSQLUSER') ?? 'root') as string,
+          password: trimQuotes(cfg.get<string>('DB_PASSWORD') ?? cfg.get<string>('MYSQLPASSWORD')),
           database: (cfg.get<string>('DB_DATABASE') ?? cfg.get<string>('DB_NAME') ?? 'pickleball_booking') as string,
           entities,
           synchronize: true,
