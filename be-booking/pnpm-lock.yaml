@@ -44,6 +44,9 @@ importers:
       dotenv:
         specifier: ^17.4.1
         version: 17.4.1
+      express:
+        specifier: ^5.1.0
+        version: 5.2.1
       googleapis:
         specifier: ^140.0.0
         version: 140.0.1
