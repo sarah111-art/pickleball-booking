@@ -128,9 +128,12 @@ const RacketRentalSelection = ({
   if (rentals.length === 0) {
     return (
       <div className="flex justify-center py-12">
-        <div className="text-center text-muted-foreground">
-          <p>Hiện tại chưa có vợt để thuê</p>
-          <p className="text-sm mt-2">Vui lòng quay lại sau</p>
+        <div className="text-center text-muted-foreground space-y-4">
+          <div>
+            <p>Hiện tại chưa có vợt để thuê</p>
+            <p className="text-sm mt-2">Bạn vẫn có thể tiếp tục đặt sân mà không cần thuê vợt</p>
+          </div>
+          <Button onClick={handleNext}>Tiếp tục</Button>
         </div>
       </div>
     );
@@ -177,7 +180,10 @@ const RacketRentalSelection = ({
               ) : (
                 <>
                   <p>Hiện tại chưa có vợt để thuê</p>
-                  <p className="text-sm mt-2">Vui lòng quay lại sau</p>
+                  <p className="text-sm mt-2">Bạn vẫn có thể tiếp tục đặt sân mà không cần thuê vợt</p>
+                  <div className="mt-4">
+                    <Button onClick={handleNext}>Tiếp tục</Button>
+                  </div>
                 </>
               )}
             </div>

@@ -9,6 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Auth = () => {
+  const backgroundImage =
+    "https://assets.grok.com/users/fcb04fb2-dedc-419c-b994-c38a81f11208/generated/37dd98d9-d0b6-490d-a1f5-4ed1dcac5186/image.jpg";
+
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -111,8 +114,12 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
-      <Card className="w-full max-w-md shadow-lg">
+    <div
+      className="relative min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat p-4"
+      style={{ backgroundImage: `url(${backgroundImage})` }}
+    >
+      <div className="absolute inset-0 bg-black/45" />
+      <Card className="relative z-10 w-full max-w-md shadow-lg bg-card/95 backdrop-blur-sm">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Sân Pickleball</CardTitle>
           <CardDescription className="text-center">
