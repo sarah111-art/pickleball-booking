@@ -54,8 +54,8 @@ export default async (req: any, res: any) => {
   return instance(req, res);
 };
 
-// Chạy local (Development)
-if (process.env.NODE_ENV !== 'production') {
+// Chạy trên Render / Docker / local (bất cứ môi trường nào không phải Vercel Serverless)
+if (!process.env.VERCEL) {
   async function bootstrap() {
     const nestApp = await NestFactory.create(AppModule);
     const app = await setupApp(nestApp);
