@@ -23,6 +23,10 @@ interface BookingDetail {
   depositAmount: number;
   status: string;
   qrUrl?: string;
+  total?: string;
+  courtPrice?: string;
+  productPrice?: string;
+  rentalPrice?: string;
 }
 
 const PaymentSuccess = () => {
