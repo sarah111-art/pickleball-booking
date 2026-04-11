@@ -11,9 +11,10 @@ describe('AuthService', () => {
   } as any;
 
   const fakeJwt = { sign: jest.fn().mockReturnValue('token') } as any;
+  const fakeConfig = { get: jest.fn().mockReturnValue(undefined) } as any;
 
   beforeEach(() => {
-    svc = new AuthService(fakeUsers, fakeJwt);
+    svc = new AuthService(fakeUsers, fakeJwt, fakeConfig);
   });
 
   it('register should create user and return token', async () => {

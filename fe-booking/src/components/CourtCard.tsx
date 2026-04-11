@@ -31,8 +31,8 @@ const CourtCard = ({ id, name, image, location, venueName, venueId, capacity, pr
   const handleBooking = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
 
-    if (available && id && venueId) {
-      // Navigate to booking with court data pre-filled
+    if (available) {
+      // Always navigate to booking when the CTA is "Đặt Sân Ngay".
       navigate("/booking", {
         state: {
           courtId: id,

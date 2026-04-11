@@ -1,11 +1,64 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import { OAuth2Client } from 'google-auth-library';
+import * as nodemailer from 'nodemailer';
 import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private usersService: UsersService, private jwt: JwtService) {}
+  constructor(
+    private usersService: UsersService,
+    private jwt: JwtService,
+    private configService: ConfigService,
+  ) {}
+
+  private getGoogleClient() {
+    const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
+    if (!clientId) {
+      throw new UnauthorizedException('Google login is not configured');
+    }
+    return { client: new OAuth2Client(clientId), clientId };
+  }
+
+  private async sendResetEmail(email: string, resetLink: string) {
+    const smtpHost = this.configService.get<string>('SMTP_HOST');
+    const smtpPort = Number(this.configService.get<string>('SMTP_PORT') ?? 587);
+    const smtpUser = this.configService.get<string>('SMTP_USER');
+    const smtpPass = this.configService.get<string>('SMTP_PASS');
+    const fromEmail = this.configService.get<string>('MAIL_FROM') ?? smtpUser;
+
+    if (!smtpHost || !smtpUser || !smtpPass || !fromEmail) {
+      // Keep flow usable on environments without SMTP; FE still receives success message.
+      return;
+    }
+
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+    });
+
+    await transporter.sendMail({
+      from: fromEmail,
+      to: email,
+      subject: 'Yeu cau dat lai mat khau',
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #222;">
+          <h2>Dat lai mat khau</h2>
+          <p>Ban vua yeu cau dat lai mat khau cho tai khoan Pickleball Booking.</p>
+          <p>Nhan vao lien ket ben duoi de dat lai mat khau (hieu luc 30 phut):</p>
+          <p><a href="${resetLink}" target="_blank">${resetLink}</a></p>
+          <p>Neu ban khong thuc hien yeu cau nay, vui long bo qua email.</p>
+        </div>
+      `,
+    });
+  }
 
   async register(payload: { email: string; password: string; fullName?: string; phone?: string }) {
     const existing = await this.usersService.findByEmail(payload.email);
@@ -50,6 +103,41 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
+  async googleLogin(idToken: string) {
+    if (!idToken) throw new UnauthorizedException('Missing Google token');
+
+    const { client, clientId } = this.getGoogleClient();
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: clientId,
+    });
+
+    const payload = ticket.getPayload();
+    const email = payload?.email;
+    const emailVerified = payload?.email_verified;
+    const fullName = payload?.name;
+
+    if (!email || !emailVerified) {
+      throw new UnauthorizedException('Google account is not verified');
+    }
+
+    let user = await this.usersService.findByEmail(email);
+    if (!user) {
+      user = await this.usersService.create({
+        email,
+        fullName,
+        role: 'user',
+      });
+    }
+
+    const authPayload = { sub: user.id, email: user.email, role: user.role };
+    const accessToken = this.jwt.sign(authPayload);
+    const refreshToken = await bcrypt.hash(`${user.email}:${Date.now()}`, 4);
+    await this.usersService.update(user.id, { refreshToken });
+
+    return { accessToken, refreshToken };
+  }
+
   async refresh(refreshToken: string) {
     // find user with refreshToken
     // in this naive implementation we match the hashed token string in DB
@@ -64,17 +152,43 @@ export class AuthService {
   async forgotPassword(email: string) {
     const user = await this.usersService.findByEmail(email);
     if (!user) return { ok: true };
-    // create a simple token and store it
-    const token = (await bcrypt.hash(`${user.email}:${Date.now()}`, 6)).replace(/\//g, '');
+
+    const token = this.jwt.sign(
+      { sub: user.id, type: 'password_reset' },
+      { expiresIn: '30m' },
+    );
+
+    const frontendUrl = (this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:5173').replace(/\/$/, '');
+    const resetLink = `${frontendUrl}/reset-password?token=${encodeURIComponent(token)}`;
+
     await this.usersService.update(user.id, { resetToken: token });
-    // in real app send email to user with reset link
-    return { ok: true, resetToken: token };
+    await this.sendResetEmail(user.email, resetLink);
+
+    return { ok: true };
   }
 
   async resetPassword(resetToken: string, newPassword: string) {
-    const users = await this.usersService.findAll();
-    const user = users.find((u) => u.resetToken === resetToken);
-    if (!user) throw new UnauthorizedException('Invalid reset token');
+    if (!resetToken) throw new UnauthorizedException('Missing reset token');
+    if (!newPassword || newPassword.length < 6) {
+      throw new UnauthorizedException('Password must be at least 6 characters');
+    }
+
+    let decoded: { sub: string; type?: string };
+    try {
+      decoded = this.jwt.verify(resetToken) as { sub: string; type?: string };
+    } catch {
+      throw new UnauthorizedException('Reset token expired or invalid');
+    }
+
+    if (decoded.type !== 'password_reset') {
+      throw new UnauthorizedException('Invalid reset token');
+    }
+
+    const user = await this.usersService.findOne(decoded.sub);
+    if (!user.resetToken || user.resetToken !== resetToken) {
+      throw new UnauthorizedException('Reset token expired or invalid');
+    }
+
     const hashed = await bcrypt.hash(newPassword, 10);
     await this.usersService.update(user.id, { password: hashed, resetToken: undefined });
     return { ok: true };

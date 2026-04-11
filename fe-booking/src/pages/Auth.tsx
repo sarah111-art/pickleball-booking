@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Auth = () => {
+  const googleButtonRef = useRef<HTMLDivElement | null>(null);
   const backgroundImage =
     "https://res.cloudinary.com/di7d0xja0/image/upload/v1775892247/bg-01_peolxq.jpg";
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -21,6 +23,8 @@ const Auth = () => {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupFullName, setSignupFullName] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   useEffect(() => {
     // Check if user is already logged in
@@ -28,6 +32,62 @@ const Auth = () => {
       navigate("/");
     }
   }, [navigate]);
+
+  useEffect(() => {
+    if (!googleClientId) return;
+
+    const setupGoogle = () => {
+      const g = (window as any).google;
+      if (!g?.accounts?.id || !googleButtonRef.current) return;
+
+      g.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: async (resp: { credential?: string }) => {
+          if (!resp.credential) return;
+          const { error } = await auth.loginWithGoogle(resp.credential);
+          if (error) {
+            toast({
+              title: "Dang nhap Google that bai",
+              description: error,
+              variant: "destructive",
+            });
+            return;
+          }
+          toast({
+            title: "Dang nhap thanh cong",
+            description: "Chao mung ban quay tro lai!",
+          });
+          navigate("/");
+        },
+      });
+
+      googleButtonRef.current.innerHTML = "";
+      g.accounts.id.renderButton(googleButtonRef.current, {
+        type: "standard",
+        theme: "outline",
+        text: "signin_with",
+        shape: "rectangular",
+        size: "large",
+        width: 320,
+      });
+    };
+
+    if ((window as any).google?.accounts?.id) {
+      setupGoogle();
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = setupGoogle;
+    document.head.appendChild(script);
+
+    return () => {
+      script.onload = null;
+    };
+  }, [googleClientId, navigate, toast]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,12 +173,49 @@ const Auth = () => {
     setLoading(false);
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail) {
+      toast({
+        title: "Loi",
+        description: "Vui long nhap email de nhan link dat lai mat khau",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setForgotLoading(true);
+    const { error } = await auth.forgotPassword(forgotEmail);
+    if (error) {
+      toast({
+        title: "Khong gui duoc email",
+        description: error,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Da gui link dat lai mat khau",
+        description: "Vui long kiem tra hop thu email cua ban",
+      });
+      setForgotEmail("");
+    }
+    setForgotLoading(false);
+  };
+
   return (
     <div
       className="relative min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat p-4"
       style={{ backgroundImage: `url(${backgroundImage})` }}
     >
       <div className="absolute inset-0 bg-black/10" />
+      <Button
+        type="button"
+        variant="outline"
+        className="absolute top-6 left-6 z-10 bg-white/90 hover:bg-white"
+        onClick={() => navigate("/")}
+      >
+        Quay lại trang chủ
+      </Button>
       <Card className="relative z-10 w-full max-w-md shadow-2xl bg-white border-0">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Sân Pickleball</CardTitle>
@@ -161,6 +258,27 @@ const Auth = () => {
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Đang xử lý..." : "Đăng nhập"}
+                </Button>
+                {googleClientId ? (
+                  <div className="pt-1 flex justify-center">
+                    <div ref={googleButtonRef} />
+                  </div>
+                ) : (
+                  <p className="text-xs text-center text-muted-foreground">Dang nhap Google chua duoc cau hinh</p>
+                )}
+              </form>
+
+              <form onSubmit={handleForgotPassword} className="mt-4 border-t pt-4 space-y-2">
+                <p className="text-sm font-medium">Quen mat khau?</p>
+                <Input
+                  type="email"
+                  placeholder="Nhap email de nhan link doi mat khau"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  disabled={forgotLoading}
+                />
+                <Button type="submit" variant="outline" className="w-full" disabled={forgotLoading}>
+                  {forgotLoading ? "Dang gui..." : "Gui link dat lai mat khau"}
                 </Button>
               </form>
             </TabsContent>

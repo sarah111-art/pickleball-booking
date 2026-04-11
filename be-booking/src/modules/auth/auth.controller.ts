@@ -24,6 +24,11 @@ export class AuthController {
     return this.authService.login(body.email, body.password);
   }
 
+  @Post('google-login')
+  googleLogin(@Body() body: any) {
+    return this.authService.googleLogin(body.idToken);
+  }
+
   @Post('refresh-token')
   refresh(@Body() body: any) {
     return this.authService.refresh(body.refreshToken);

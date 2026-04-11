@@ -1,11 +1,11 @@
 import { api } from './api';
 
 export interface User {
-  id: number;
+  id: string;
   email: string;
   fullName?: string;
   phone?: string;
-  role: 'admin' | 'manager' | 'user';
+  role: 'admin' | 'manager' | 'staff' | 'user';
 }
 
 interface LoginResponse {
@@ -39,6 +39,23 @@ export const auth = {
       localStorage.setItem('accessToken', res.data.accessToken);
     }
     return res;
+  },
+
+  async loginWithGoogle(idToken: string) {
+    const res = await api.post<LoginResponse>('/auth/google-login', { idToken });
+    if (res.data) {
+      localStorage.setItem('accessToken', res.data.accessToken);
+      localStorage.setItem('refreshToken', res.data.refreshToken);
+    }
+    return res;
+  },
+
+  async forgotPassword(email: string) {
+    return api.post<{ ok: boolean }>('/auth/forgot-password', { email });
+  },
+
+  async resetPassword(resetToken: string, password: string) {
+    return api.post<{ ok: boolean }>('/auth/reset-password', { resetToken, password });
   },
 
   async getProfile() {
