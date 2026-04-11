@@ -17,7 +17,7 @@ export class Payment {
   @Column({ type: 'varchar', nullable: true })
   providerOrderId?: string;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'text', nullable: true })
   qrUrl?: string;
 
   @Column({ type: 'text', nullable: true })

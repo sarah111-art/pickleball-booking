@@ -5,8 +5,8 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Bookings from './pages/Bookings';
 import Courts from './pages/Courts';
-import Timeslots from './pages/Timeslots';
 import Users from './pages/Users';
+import Settings from './pages/Settings';
 import Locations from './pages/Locations';
 
 import Payments from './pages/Payments';
@@ -14,21 +14,27 @@ import Reviews from './pages/Reviews';
 import Products from './pages/Products';
 import Rackets from './pages/Rackets';
 import RacketRentals from './pages/RacketRentals';
+import RacketOrders from './pages/RacketOrders';
+import News from './pages/News';
 import StaffPermissions from './pages/StaffPermissions';
 import type { JSX } from 'react';
 
 interface ProtectedProps {
   children: JSX.Element;
   roles?: string[];
+  section?: string;
 }
 
-const ProtectedRoute = ({ children, roles }: ProtectedProps) => {
-  const { user } = useAuth();
+const ProtectedRoute = ({ children, roles, section }: ProtectedProps) => {
+  const { user, hasPermission } = useAuth();
   if (!user) {
     return <Navigate to="/login" replace />;
   }
   if (roles && !roles.includes(user.role)) {
     // unauthorized
+    return <Navigate to="/" replace />;
+  }
+  if (section && !hasPermission(section, 'view')) {
     return <Navigate to="/" replace />;
   }
   return children;
@@ -58,7 +64,7 @@ function App() {
             <Route
               path="/bookings"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute section="bookings">
                   <Bookings />
                 </ProtectedRoute>
               }
@@ -66,23 +72,15 @@ function App() {
             <Route
               path="/courts"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute section="courts">
                   <Courts />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/timeslots"
-              element={
-                <ProtectedRoute>
-                  <Timeslots />
                 </ProtectedRoute>
               }
             />
             <Route
               path="/users"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute section="users">
                   <Users />
                 </ProtectedRoute>
               }
@@ -90,7 +88,7 @@ function App() {
             <Route
               path="/locations"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute section="locations">
                   <Locations />
                 </ProtectedRoute>
               }
@@ -99,7 +97,7 @@ function App() {
             <Route
               path="/payments"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute section="payments">
                   <Payments />
                 </ProtectedRoute>
               }
@@ -107,7 +105,7 @@ function App() {
             <Route
               path="/reviews"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute section="reviews">
                   <Reviews />
                 </ProtectedRoute>
               }
@@ -115,7 +113,7 @@ function App() {
             <Route
               path="/products"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute section="products">
                   <Products />
                 </ProtectedRoute>
               }
@@ -123,7 +121,7 @@ function App() {
             <Route
               path="/rackets"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute section="rackets">
                   <Rackets />
                 </ProtectedRoute>
               }
@@ -131,16 +129,40 @@ function App() {
             <Route
               path="/racket-rentals"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute section="racket_rentals">
                   <RacketRentals />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/racket-orders"
+              element={
+                <ProtectedRoute section="racket_orders">
+                  <RacketOrders />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/news"
+              element={
+                <ProtectedRoute section="news">
+                  <News />
                 </ProtectedRoute>
               }
             />
             <Route
               path="/permissions"
               element={
-                <ProtectedRoute roles={["manager"]}>
+                <ProtectedRoute roles={["manager"]} section="staff">
                   <StaffPermissions />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute section="settings">
+                  <Settings />
                 </ProtectedRoute>
               }
             />

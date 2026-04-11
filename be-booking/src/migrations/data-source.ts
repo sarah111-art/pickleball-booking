@@ -4,7 +4,6 @@ import { config } from 'dotenv';
 import { User } from '../entities/user.entity';
 import { Location } from '../entities/location.entity';
 import { Court } from '../entities/court.entity';
-import { TimeSlot } from '../entities/timeslot.entity';
 import { Booking } from '../entities/booking.entity';
 import { Review } from '../entities/review.entity';
 import { Setting } from '../entities/setting.entity';
@@ -15,6 +14,8 @@ import { ChatMessage } from '../entities/chat-message.entity';
 import { Product } from '../entities/product.entity';
 import { Racket } from '../entities/racket.entity';
 import { RacketRental } from '../entities/racket-rental.entity';
+import { RacketOrder } from '../entities/racket-order.entity';
+import { BlogPost } from '../entities/blog-post.entity';
 
 config();
 
@@ -28,7 +29,7 @@ export default new DataSource({
   username: trimQuotes(process.env.DB_USER || process.env.DB_USERNAME || 'root'),
   password: trimQuotes(process.env.DB_PASSWORD || ''),
   database: trimQuotes(process.env.DB_NAME || process.env.DB_DATABASE || 'pickleball'),
-  entities: [User, Location, Court, TimeSlot, Booking, Review, Setting, Payment, Venue, ChatConversation, ChatMessage, Product, Racket, RacketRental],
+  entities: [User, Location, Court, Booking, Review, Setting, Payment, Venue, ChatConversation, ChatMessage, Product, Racket, RacketRental, RacketOrder, BlogPost],
   migrations: [__dirname + '/1*'],
   synchronize: false,
 });

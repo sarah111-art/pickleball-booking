@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
-export type UserRole = 'admin' | 'manager' | 'user';
+export type UserRole = 'admin' | 'manager' | 'staff' | 'user';
+export type PermissionAction = 'view' | 'add' | 'edit' | 'delete';
 
 @Entity('users')
 export class User {
@@ -23,7 +24,7 @@ export class User {
   role: UserRole;
 
   @Column({ type: 'json', nullable: true })
-  permissions?: Array<{ section: string; level: 'full' | 'add' | 'view' | 'edit' | 'delete' }>;
+  permissions?: Array<{ section: string; actions: PermissionAction[] }>;
 
   @Column({ name: 'is_active', default: true })
   isActive: boolean;

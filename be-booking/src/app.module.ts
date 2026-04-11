@@ -7,7 +7,6 @@ import { AppService } from './app.service';
 import { User } from './entities/user.entity';
 import { Location } from './entities/location.entity';
 import { Court } from './entities/court.entity';
-import { TimeSlot } from './entities/timeslot.entity';
 import { Booking } from './entities/booking.entity';
 import { Review } from './entities/review.entity';
 import { Payment } from './entities/payment.entity';
@@ -18,12 +17,13 @@ import { ChatMessage } from './entities/chat-message.entity';
 import { Product } from './entities/product.entity';
 import { Racket } from './entities/racket.entity';
 import { RacketRental } from './entities/racket-rental.entity';
+import { RacketOrder } from './entities/racket-order.entity';
+import { BlogPost } from './entities/blog-post.entity';
 import { UsersModule } from './modules/users/users.module';
 import { VenuesModule } from './modules/venues/venues.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { LocationsModule } from './modules/locations/locations.module';
 import { CourtsModule } from './modules/courts/courts.module';
-import { TimeSlotsModule } from './modules/timeslots/timeslots.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { SettingsModule } from './modules/settings/settings.module';
@@ -33,6 +33,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ProductsModule } from './modules/products/products.module';
 import { RacketsModule } from './modules/rackets/rackets.module';
 import { RacketRentalsModule } from './modules/racket-rentals/racket-rentals.module';
+import { RacketOrdersModule } from './modules/racket-orders/racket-orders.module';
+import { BlogPostsModule } from './modules/blog-posts/blog-posts.module';
 
 // normalize environment values (strip accidental surrounding quotes like "password")
 @Module({
@@ -44,7 +46,7 @@ import { RacketRentalsModule } from './modules/racket-rentals/racket-rentals.mod
       inject: [ConfigService],
       useFactory: (cfg: ConfigService): TypeOrmModuleOptions => {
         const skip = (process.env.SKIP_DB ?? cfg.get('SKIP_DB')) === 'true';
-        const entities = [User, Location, Court, TimeSlot, Booking, Review, Setting, Payment, Venue, ChatConversation, ChatMessage, Product, Racket, RacketRental];
+        const entities = [User, Location, Court, Booking, Review, Setting, Payment, Venue, ChatConversation, ChatMessage, Product, Racket, RacketRental, RacketOrder, BlogPost];
 
         const trimQuotes = (s?: string) =>
           (s || '').replace(/^\s*"(.*)"\s*$/, '$1').replace(/^\s*'(.*)'\s*$/, '$1');
@@ -74,7 +76,6 @@ import { RacketRentalsModule } from './modules/racket-rentals/racket-rentals.mod
     VenuesModule,
     LocationsModule,
     CourtsModule,
-    TimeSlotsModule,
     BookingsModule,
     ReviewsModule,
     UploadModule,
@@ -85,6 +86,8 @@ import { RacketRentalsModule } from './modules/racket-rentals/racket-rentals.mod
     ProductsModule,
     RacketsModule,
     RacketRentalsModule,
+    RacketOrdersModule,
+    BlogPostsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

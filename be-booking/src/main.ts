@@ -1,28 +1,29 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { UsersModule } from './modules/users/users.module';
-import { LocationsModule } from './modules/locations/locations.module';
-import { CourtsModule } from './modules/courts/courts.module';
-import { TimeSlotsModule } from './modules/timeslots/timeslots.module';
-import { BookingsModule } from './modules/bookings/bookings.module';
-import { ReviewsModule } from './modules/reviews/reviews.module';
-import { SettingsModule } from './modules/settings/settings.module';
-import { PaymentsModule } from './modules/payments/payments.module';
-import { AuthModule } from './modules/auth/auth.module';
-import { ChatModule } from './modules/chat/chat.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import * as express from 'express';
+import { 
+  UsersModule, LocationsModule, CourtsModule,
+  BookingsModule, ReviewsModule, SettingsModule, PaymentsModule, 
+  AuthModule, ChatModule, RacketOrdersModule, BlogPostsModule 
+} from './modules'; // Đảm bảo đường dẫn import đúng
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+let cachedApp: any;
 
-  // Enable CORS for frontend
+async function setupApp(app: any) {
+  // Allow larger JSON payloads for base64 image uploads.
+  app.use(express.json({ limit: '15mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+
+  // 1. Enable CORS
   app.enableCors({
-    origin: true, // cho phép tất cả origin (dev)
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
 
+  // 2. Swagger Config
   const config = new DocumentBuilder()
     .setTitle('Pickleball Booking API')
     .setDescription('API for booking pickleball courts')
@@ -30,49 +31,36 @@ async function bootstrap() {
     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'Authorization')
     .build();
 
-  // ensure the application is fully initialized so Swagger explorer can scan controllers/routes
-  await app.init();
-
-  // Make sure every module has a 'routes' Map so Swagger scanner doesn't crash
-  try {
-    const container = (app as any).container;
-    const modules = [...container.getModules().values()];
-    modules.forEach((m: any) => {
-      if (!m.routes || typeof m.routes.values !== 'function') {
-        m.routes = new Map();
-      }
-    });
-
-    // DEBUG: inspect internal modules to find any module with missing routes (causes SwaggerScanner crash)
-    const bad = modules.filter((m: any) => !m.routes || typeof m.routes.values !== 'function');
-    if (bad.length > 0) {
-      console.error('Swagger debug: found modules with missing/invalid routes:');
-      bad.forEach((m: any) => console.error(' -', m.metatype?.name || '<anonymous>', 'routes=', m.routes));
-    }
-  } catch (err) {
-    console.error('Swagger debug: container inspection failed', err);
-  }
-
-  // Create the OpenAPI document but only scan application modules that have HTTP controllers.
-  // This avoids scanning internal/core modules which do not expose a routes map and cause the
-  // Swagger scanner to crash in some NestJS versions/environments.
   const document = SwaggerModule.createDocument(app, config, {
     include: [
-      UsersModule,
-      LocationsModule,
-      CourtsModule,
-      TimeSlotsModule,
-      BookingsModule,
-      ReviewsModule,
-      SettingsModule,
-      PaymentsModule,
-      AuthModule,
-      ChatModule,
+      UsersModule, LocationsModule, CourtsModule,
+      BookingsModule, ReviewsModule, SettingsModule, PaymentsModule,
+      AuthModule, ChatModule, RacketOrdersModule, BlogPostsModule,
     ],
   });
   SwaggerModule.setup('api/docs', app, document);
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.init();
+  return app;
 }
 
-bootstrap();
+// Handler cho Vercel (Serverless)
+export default async (req: any, res: any) => {
+  if (!cachedApp) {
+    const nestApp = await NestFactory.create(AppModule);
+    cachedApp = await setupApp(nestApp);
+  }
+  const instance = cachedApp.getHttpAdapter().getInstance();
+  return instance(req, res);
+};
+
+// Chạy local (Development)
+if (process.env.NODE_ENV !== 'production') {
+  async function bootstrap() {
+    const nestApp = await NestFactory.create(AppModule);
+    const app = await setupApp(nestApp);
+    await app.listen(process.env.PORT ?? 3000);
+    console.log(`Application is running on: ${await app.getUrl()}`);
+  }
+  bootstrap();
+}

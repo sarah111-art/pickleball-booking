@@ -45,12 +45,24 @@ const Navbar = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="text-lg sm:text-xl font-bold text-primary" onClick={closeMenu}>
-            Pickleball Booking
+          <Link to="/" className="flex items-center gap-2 text-lg sm:text-xl font-bold text-primary hover:opacity-80 transition-opacity" onClick={closeMenu}>
+            <div className="w-8 h-8 rounded-full overflow-hidden bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <img
+                src="https://res.cloudinary.com/di7d0xja0/image/upload/v1775878449/image_xczpsy.jpg"
+                alt="Logo Pickleball"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <span>Sân Pickleball</span>
           </Link>
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-4">
+            <Link to="/">
+              <Button variant="ghost" size="sm">
+                Trang chủ
+              </Button>
+            </Link>
             <Link to="/schedule">
               <Button variant="ghost" size="sm">
                 Giá & Lịch
@@ -59,6 +71,16 @@ const Navbar = () => {
             <Link to="/booking">
               <Button variant="ghost" size="sm">
                 Đặt sân
+              </Button>
+            </Link>
+            <Link to="/rackets">
+              <Button variant="ghost" size="sm">
+                Cửa hàng vợt
+              </Button>
+            </Link>
+            <Link to="/news">
+              <Button variant="ghost" size="sm">
+                Tin tức
               </Button>
             </Link>
             {user ? (
@@ -98,6 +120,11 @@ const Navbar = () => {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border animate-in slide-in-from-top-2 duration-200">
             <div className="flex flex-col gap-2">
+              <Link to="/" onClick={closeMenu}>
+                <Button variant="ghost" className="w-full justify-start">
+                  Trang chủ
+                </Button>
+              </Link>
               <Link to="/schedule" onClick={closeMenu}>
                 <Button variant="ghost" className="w-full justify-start">
                   Giá & Lịch
@@ -106,6 +133,16 @@ const Navbar = () => {
               <Link to="/booking" onClick={closeMenu}>
                 <Button variant="ghost" className="w-full justify-start">
                   Đặt sân
+                </Button>
+              </Link>
+              <Link to="/rackets" onClick={closeMenu}>
+                <Button variant="ghost" className="w-full justify-start">
+                  Cửa hàng vợt
+                </Button>
+              </Link>
+              <Link to="/news" onClick={closeMenu}>
+                <Button variant="ghost" className="w-full justify-start">
+                  Tin tức
                 </Button>
               </Link>
               {user ? (

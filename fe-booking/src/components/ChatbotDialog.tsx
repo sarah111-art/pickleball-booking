@@ -18,6 +18,7 @@ interface Message {
     courtCount: number;
     price: number;
     venueId: string;
+    locationId?: string;
   }>;
 }
 
@@ -93,6 +94,7 @@ const ChatbotDialog = ({ open, onOpenChange }: ChatbotDialogProps) => {
           courtCount: number;
           price: number;
           venueId: string;
+          locationId?: string;
         }>;
         conversationId?: string;
       }>('/chat/message', {
@@ -135,9 +137,19 @@ const ChatbotDialog = ({ open, onOpenChange }: ChatbotDialogProps) => {
     }
   };
 
-  const handleBookCourt = (venueId: string) => {
+  const handleBookCourt = (result: {
+    venueId: string;
+    locationId?: string;
+    name: string;
+  }) => {
+    const bookingLocationId = result.locationId || result.venueId;
     onOpenChange(false);
-    navigate(`/booking?venue=${venueId}`);
+    navigate('/booking', {
+      state: {
+        venueId: bookingLocationId,
+        venueName: result.name,
+      },
+    });
   };
 
   return (
@@ -176,7 +188,13 @@ const ChatbotDialog = ({ open, onOpenChange }: ChatbotDialogProps) => {
                           </div>
                           <Button
                             size="sm"
-                            onClick={() => handleBookCourt(result.venueId)}
+                            onClick={() =>
+                              handleBookCourt({
+                                venueId: result.venueId,
+                                locationId: result.locationId,
+                                name: result.name,
+                              })
+                            }
                             className="shrink-0"
                           >
                             Đặt ngay

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, type User } from "@/lib/auth";
 import { api } from "@/lib/api";
@@ -7,9 +7,13 @@ import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, MapPin, Clock, CreditCard, CheckCircle2, XCircle, Loader2, Receipt } from "lucide-react";
+import { Calendar, MapPin, Clock, CreditCard, CheckCircle2, XCircle, Loader2, Receipt, MessageSquarePlus, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 
 interface BookingWithDetails {
   id: string;
@@ -17,6 +21,8 @@ interface BookingWithDetails {
   total: number;
   date: string;
   createdAt: string;
+  startTime?: string;
+  endTime?: string;
   court: {
     id: string;
     courtName: string;
@@ -27,7 +33,7 @@ interface BookingWithDetails {
       district: string | null;
     };
   };
-  slot: {
+  slot?: {
     id: string;
     date: string;
     start: string;
@@ -35,9 +41,23 @@ interface BookingWithDetails {
   };
 }
 
+interface Review {
+  id: string;
+  rating: number;
+  comment?: string;
+  user?: {
+    id: string;
+  };
+}
+
 const MyBookings = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [activeBooking, setActiveBooking] = useState<BookingWithDetails | null>(null);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -69,6 +89,60 @@ const MyBookings = () => {
     enabled: !!user && auth.isAuthenticated(),
   });
 
+  const { data: reviewsByCourt = {} } = useQuery({
+    queryKey: ["my-booking-reviews", bookings?.map((booking) => booking.court?.id).filter(Boolean).join(",")],
+    queryFn: async () => {
+      const courtIds = Array.from(new Set((bookings || []).map((booking) => booking.court?.id).filter(Boolean)));
+      const entries = await Promise.all(
+        courtIds.map(async (courtId) => {
+          const { data, error } = await api.get<Review[]>(`/reviews/court/${courtId}`);
+          if (error) {
+            return [courtId, []] as const;
+          }
+          return [courtId, data || []] as const;
+        }),
+      );
+
+      return Object.fromEntries(entries) as Record<string, Review[]>;
+    },
+    enabled: !!bookings?.length,
+  });
+
+  const createReview = useMutation({
+    mutationFn: async (payload: { courtId: string; rating: number; comment: string }) => {
+      const { data, error } = await api.post<Review>("/reviews", payload);
+      if (error) throw new Error(error);
+      return data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["my-booking-reviews"] });
+      toast({
+        title: "Đã gửi đánh giá",
+        description: "Cảm ơn bạn đã chia sẻ trải nghiệm đặt sân.",
+      });
+      setActiveBooking(null);
+      setRating(5);
+      setComment("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Không thể gửi đánh giá",
+        description: error.message || "Vui lòng thử lại sau.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const reviewedCourtIds = useMemo(() => {
+    if (!user) return new Set<string>();
+
+    return new Set(
+      Object.entries(reviewsByCourt)
+        .filter(([, reviews]) => reviews.some((review) => String(review.user?.id) === String(user.id)))
+        .map(([courtId]) => courtId),
+    );
+  }, [reviewsByCourt, user]);
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
@@ -87,6 +161,34 @@ const MyBookings = () => {
 
   const formatTime = (time: string) => {
     return time.substring(0, 5);
+  };
+
+  const canReviewBooking = (booking: BookingWithDetails) => {
+    if (!booking.court?.id) return false;
+    if (booking.status === "cancelled") return false;
+
+    const bookingEnd = new Date(`${booking.date}T${booking.endTime || booking.slot?.end || "00:00:00"}`);
+    return bookingEnd.getTime() <= Date.now();
+  };
+
+  const hasReviewedBookingCourt = (booking: BookingWithDetails) => {
+    return reviewedCourtIds.has(booking.court?.id);
+  };
+
+  const handleOpenReview = (booking: BookingWithDetails) => {
+    setActiveBooking(booking);
+    setRating(5);
+    setComment("");
+  };
+
+  const handleSubmitReview = async () => {
+    if (!activeBooking?.court?.id) return;
+
+    await createReview.mutateAsync({
+      courtId: activeBooking.court.id,
+      rating,
+      comment: comment.trim(),
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -127,6 +229,63 @@ const MyBookings = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="pt-16">
+        <Dialog open={!!activeBooking} onOpenChange={(open) => !open && setActiveBooking(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Đánh giá sân</DialogTitle>
+              <DialogDescription>
+                {activeBooking
+                  ? `Chia sẻ trải nghiệm của bạn tại ${activeBooking.court?.courtName || "sân này"}.`
+                  : "Chia sẻ trải nghiệm của bạn sau khi chơi."}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div>
+                <div className="mb-2 text-sm font-medium">Mức đánh giá</div>
+                <div className="flex items-center gap-2">
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setRating(value)}
+                      className="transition-transform hover:scale-110"
+                      aria-label={`Chấm ${value} sao`}
+                    >
+                      <Star
+                        className={cn(
+                          "h-7 w-7",
+                          value <= rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground",
+                        )}
+                      />
+                    </button>
+                  ))}
+                  <span className="text-sm text-muted-foreground">{rating}/5 sao</span>
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-2 text-sm font-medium">Nhận xét</div>
+                <Textarea
+                  value={comment}
+                  onChange={(event) => setComment(event.target.value)}
+                  placeholder="Sân có dễ tìm không, mặt sân thế nào, phục vụ ra sao..."
+                  rows={5}
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setActiveBooking(null)}>
+                Để sau
+              </Button>
+              <Button onClick={handleSubmitReview} disabled={createReview.isPending}>
+                {createReview.isPending ? "Đang gửi..." : "Gửi đánh giá"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* <section className="py-12 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
           <div className="container px-4">
             <h1 className="text-4xl md:text-5xl font-bold text-center mb-4 text-foreground">
@@ -231,10 +390,10 @@ const MyBookings = () => {
                                       {formatDate(booking.slot?.date || booking.date)}
                                     </div>
                                   ) : null}
-                                  {booking.slot?.start && booking.slot?.end ? (
+                                  {(booking.startTime || booking.slot?.start) && (booking.endTime || booking.slot?.end) ? (
                                     <div className="flex items-center gap-1.5">
                                       <Clock className="h-4 w-4" />
-                                      {formatTime(booking.slot.start)} - {formatTime(booking.slot.end)}
+                                      {formatTime(booking.startTime || booking.slot?.start || "00:00")} - {formatTime(booking.endTime || booking.slot?.end || "00:00")}
                                     </div>
                                   ) : null}
                                 </div>
@@ -281,6 +440,31 @@ const MyBookings = () => {
                           </div>
                         </div>
                       </div>
+
+                      {canReviewBooking(booking) ? (
+                        <div className="pt-4 border-t">
+                          <div className="flex items-center justify-between gap-4 rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-transparent p-4">
+                            <div>
+                              <div className="flex items-center gap-2 font-semibold text-base text-foreground">
+                                <MessageSquarePlus className="h-4 w-4 text-amber-600" />
+                                Đánh giá trải nghiệm sân
+                              </div>
+                              <div className="mt-1 text-sm text-muted-foreground">
+                                {hasReviewedBookingCourt(booking)
+                                  ? "Bạn đã gửi đánh giá cho sân này."
+                                  : "Sau khi chơi xong, bạn có thể để lại nhận xét để giúp người khác chọn sân phù hợp."}
+                              </div>
+                            </div>
+                            <Button
+                              variant={hasReviewedBookingCourt(booking) ? "outline" : "default"}
+                              onClick={() => handleOpenReview(booking)}
+                              disabled={hasReviewedBookingCourt(booking)}
+                            >
+                              {hasReviewedBookingCourt(booking) ? "Đã đánh giá" : "Đánh giá ngay"}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : null}
                     </CardContent>
                   </Card>
                 ))}

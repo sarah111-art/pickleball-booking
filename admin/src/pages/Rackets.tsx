@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { X, Trash2, Edit2 } from "lucide-react";
+import { uploadImageToCloudinary } from "@/lib/upload-image";
 
 interface Racket {
   id: string;
@@ -18,8 +19,10 @@ const Rackets = () => {
   const [rackets, setRackets] = useState<Racket[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -54,18 +57,20 @@ const Rackets = () => {
       return;
     }
 
-    console.log('handleSave called, editingId:', editingId, 'formData:', formData);
-
     if (editingId) {
-      console.log('Sending PUT request to /rackets/' + editingId);
-      const { error: err } = await api.put(`/rackets/${editingId}`, formData);
-      console.log('PUT response, error:', err);
+      const { data, error: err } = await api.put<Racket>(`/rackets/${editingId}`, formData);
       if (err) {
         setError(err);
-        // Fetch lại từ server để đảm bảo data đúng
-        await fetchRackets();
+      } else {
+        if (data) {
+          setRackets((prev) => prev.map((r) => (r.id === editingId ? data : r)));
+        } else {
+          await fetchRackets();
+        }
         setShowModal(false);
         resetForm();
+        setError(null);
+        setNotice("Cập nhật vợt thành công");
       }
     } else {
       const { data, error: err } = await api.post("/rackets", formData);
@@ -75,6 +80,8 @@ const Rackets = () => {
         setRackets([...rackets, data as Racket]);
         setShowModal(false);
         resetForm();
+        setError(null);
+        setNotice("Tạo vợt thành công");
       }
     }
   };
@@ -86,6 +93,8 @@ const Rackets = () => {
       setError(err);
     } else {
       setRackets(rackets.filter(r => r.id !== id));
+      setError(null);
+      setNotice("Xóa vợt thành công");
     }
   };
 
@@ -102,6 +111,20 @@ const Rackets = () => {
       isActive: racket.isActive,
     });
     setShowModal(true);
+  };
+
+  const handleImageUpload = async (file?: File) => {
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const url = await uploadImageToCloudinary(file);
+      setFormData((prev) => ({ ...prev, image: url }));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Upload ảnh thất bại";
+      setError(message);
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const resetForm = () => {
@@ -143,6 +166,7 @@ const Rackets = () => {
       </div>
 
       {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">{error}</div>}
+      {notice && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">{notice}</div>}
 
       {loading ? (
         <div className="text-center py-8">Đang tải...</div>
@@ -151,7 +175,13 @@ const Rackets = () => {
           {rackets.map((racket) => (
             <div key={racket.id} className="border rounded-lg p-4 bg-white shadow">
               {racket.image && (
-                <img src={racket.image} alt={racket.name} className="w-full h-40 object-cover rounded mb-2" />
+                <div className="w-full h-44 bg-gray-50 rounded mb-3 border flex items-center justify-center overflow-hidden">
+                  <img
+                    src={racket.image}
+                    alt={racket.name}
+                    className="w-full h-full object-contain p-2"
+                  />
+                </div>
               )}
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -254,13 +284,29 @@ const Rackets = () => {
                   onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) })}
                 />
               </div>
-              <input
-                type="url"
-                placeholder="URL Hình Ảnh"
-                className="w-full border p-2 rounded"
-                value={formData.image}
-                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-              />
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Ảnh vợt (Cloudinary)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="w-full border p-2 rounded"
+                  onChange={(e) => handleImageUpload(e.target.files?.[0])}
+                />
+                <input
+                  type="text"
+                  className="w-full border p-2 rounded bg-gray-50"
+                  value={formData.image}
+                  readOnly
+                  placeholder={uploadingImage ? "Đang upload ảnh..." : "URL ảnh sau khi upload sẽ hiện ở đây"}
+                />
+                {formData.image && (
+                  <img
+                    src={formData.image}
+                    alt="preview"
+                    className="w-full h-32 object-cover rounded border"
+                  />
+                )}
+              </div>
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"

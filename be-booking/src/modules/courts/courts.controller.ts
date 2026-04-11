@@ -1,11 +1,10 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { CourtsService } from './courts.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { TimeSlotsService } from '../timeslots/timeslots.service';
 
 @Controller('courts')
 export class CourtsController {
-  constructor(private svc: CourtsService, private ts: TimeSlotsService) {}
+  constructor(private svc: CourtsService) {}
 
   @UseGuards(JwtAuthGuard)
   @Post()
@@ -21,12 +20,6 @@ export class CourtsController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.svc.findOne(id);
-  }
-
-  @Get(':id/slots')
-  findSlotsAlias(@Param('id') id: string, @Query('date') date?: string) {
-    if (!date) return [];
-    return this.ts.findByCourtAndDate(id, date);
   }
 
   @UseGuards(JwtAuthGuard)

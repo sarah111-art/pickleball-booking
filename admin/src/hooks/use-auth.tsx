@@ -1,17 +1,29 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { api } from '@/lib/api';
 
 export type Role = 'manager' | 'staff';
+export type PermissionAction = 'view' | 'add' | 'edit' | 'delete';
+
+export interface Permission {
+  section: string;
+  actions: PermissionAction[];
+}
 
 export interface User {
+  id?: string;
   email: string;
   role: Role;
+  fullName?: string;
+  permissions?: Permission[];
 }
 
 interface AuthContextType {
   user: User | null;
   login: (user: User) => void;
   logout: () => void;
+  refreshProfile: () => Promise<void>;
+  hasPermission: (section: string, action?: PermissionAction) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,6 +45,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   });
 
+  const refreshProfile = async () => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+
+    const res = await api.get<User>('/auth/profile');
+    if (res.data) {
+      localStorage.setItem(USER_KEY, JSON.stringify(res.data));
+      setUser(res.data);
+    }
+  };
+
+  useEffect(() => {
+    if (!user && localStorage.getItem('accessToken')) {
+      refreshProfile();
+      return;
+    }
+
+    if (user && localStorage.getItem('accessToken')) {
+      refreshProfile();
+    }
+  }, []);
+
+  const hasPermission = (section: string, action: PermissionAction = 'view') => {
+    if (!user) return false;
+    if (user.role === 'manager' && (!user.permissions || user.permissions.length === 0)) {
+      return true;
+    }
+
+    // Backward compatibility: older accounts may not have new section permissions yet.
+    // Reuse existing rackets permission for racket_orders until permissions are re-saved.
+    const normalizedSection =
+      section === 'racket_orders' &&
+      !user.permissions?.some((item) => item.section === 'racket_orders')
+        ? 'rackets'
+        : section === 'news' &&
+            !user.permissions?.some((item) => item.section === 'news')
+          ? 'reviews'
+          : section;
+
+    const permission = user.permissions?.find((item) => item.section === normalizedSection);
+    return Boolean(permission?.actions?.includes(action));
+  };
+
   const login = (newUser: User) => {
     localStorage.setItem(USER_KEY, JSON.stringify(newUser));
     setUser(newUser);
@@ -44,7 +99,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, refreshProfile, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );

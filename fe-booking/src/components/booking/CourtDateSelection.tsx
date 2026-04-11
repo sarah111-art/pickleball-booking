@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { BookingData } from "@/pages/Booking";
 
@@ -24,6 +25,7 @@ const CourtDateSelection = ({ bookingData, updateBookingData, onNext }: CourtDat
   const [loading, setLoading] = useState(true);
   const [selectedCourtId, setSelectedCourtId] = useState<string | null>(bookingData.courtId);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(bookingData.date || undefined);
+  const [showValidation, setShowValidation] = useState(false);
 
   // Check if court was pre-selected (from CourtCard click)
   const hasPreselectedCourt = !!bookingData.courtId;
@@ -38,7 +40,7 @@ const CourtDateSelection = ({ bookingData, updateBookingData, onNext }: CourtDat
 
   const fetchCourts = async () => {
     try {
-      const { data, error } = await api.get<Court[]>(`/venues/${bookingData.venueId}/courts`);
+      const { data, error } = await api.get<Court[]>(`/locations/${bookingData.venueId}/courts`);
 
       if (error) throw new Error(error);
       setCourts(data?.filter(c => c.isActive) || []);
@@ -65,6 +67,9 @@ const CourtDateSelection = ({ bookingData, updateBookingData, onNext }: CourtDat
   const handleNext = () => {
     if (selectedCourtId && selectedDate) {
       onNext();
+      setShowValidation(false);
+    } else {
+      setShowValidation(true);
     }
   };
 
@@ -140,24 +145,63 @@ const CourtDateSelection = ({ bookingData, updateBookingData, onNext }: CourtDat
 
         <div>
           <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4">Chọn Ngày</h3>
-          <Card>
-            <CardContent className="pt-4 sm:pt-6 px-2 sm:px-6">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={handleDateSelect}
-                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                className={cn("pointer-events-auto mx-auto")}
-              />
+          <Card className="border-2 border-primary/20 overflow-hidden">
+            <CardHeader className="pb-3 sm:pb-4 bg-gradient-to-r from-primary/5 to-primary/10">
+              <CardTitle className="text-lg sm:text-xl">Lịch Đặt Sân</CardTitle>
+              {selectedCourtId && bookingData.courtName && (
+                <CardDescription className="text-sm mt-1">
+                  Sân: <span className="font-medium text-foreground">{bookingData.courtName}</span>
+                </CardDescription>
+              )}
+            </CardHeader>
+            <CardContent className="pt-6 sm:pt-8 px-3 sm:px-6 pb-6 sm:pb-8">
+              <div className="flex justify-center">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={handleDateSelect}
+                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                  className="scale-110 sm:scale-125 origin-top"
+                />
+              </div>
+              {selectedDate && (
+                <div className="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                  <p className="text-sm text-muted-foreground">Ngày được chọn:</p>
+                  <p className="text-lg font-semibold text-primary">
+                    {selectedDate.toLocaleDateString("vi-VN", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric"
+                    })}
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
 
+      {showValidation && (
+        <div className="mt-5 sm:mt-6 space-y-2 sm:space-y-3">
+          {!selectedCourtId && !hasPreselectedCourt && (
+            <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg">
+              <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-red-600 flex-shrink-0" />
+              <span className="text-sm sm:text-base text-red-700 font-medium">Bạn vui lòng chọn sân</span>
+            </div>
+          )}
+          {!selectedDate && (
+            <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg">
+              <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-red-600 flex-shrink-0" />
+              <span className="text-sm sm:text-base text-red-700 font-medium">Bạn vui lòng chọn ngày đặt sân</span>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex justify-end mt-6 sm:mt-8">
         <Button
           onClick={handleNext}
-          disabled={!selectedCourtId || !selectedDate}
           size="lg"
           className="w-full sm:w-auto"
         >

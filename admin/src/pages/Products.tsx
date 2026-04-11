@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { X, Trash2, Edit2 } from "lucide-react";
+import { uploadImageToCloudinary } from "@/lib/upload-image";
 
 interface Product {
   id: string;
@@ -19,6 +20,7 @@ const Products = () => {
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -80,6 +82,20 @@ const Products = () => {
       setError(err);
     } else {
       setProducts(products.filter(p => p.id !== id));
+    }
+  };
+
+  const handleImageUpload = async (file?: File) => {
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const url = await uploadImageToCloudinary(file);
+      setFormData((prev) => ({ ...prev, image: url }));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Upload ảnh thất bại";
+      setError(message);
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -240,13 +256,29 @@ const Products = () => {
                   onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) })}
                 />
               </div>
-              <input
-                type="url"
-                placeholder="URL Hình Ảnh"
-                className="w-full border p-2 rounded"
-                value={formData.image}
-                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-              />
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Ảnh sản phẩm (Cloudinary)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="w-full border p-2 rounded"
+                  onChange={(e) => handleImageUpload(e.target.files?.[0])}
+                />
+                <input
+                  type="text"
+                  className="w-full border p-2 rounded bg-gray-50"
+                  value={formData.image}
+                  readOnly
+                  placeholder={uploadingImage ? "Đang upload ảnh..." : "URL ảnh sau khi upload sẽ hiện ở đây"}
+                />
+                {formData.image && (
+                  <img
+                    src={formData.image}
+                    alt="preview"
+                    className="w-full h-32 object-cover rounded border"
+                  />
+                )}
+              </div>
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"

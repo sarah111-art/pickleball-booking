@@ -14,21 +14,21 @@ const Navbar = () => {
     <nav className="bg-background border-b border-border px-4 py-2">
       <div className="container mx-auto flex items-center justify-between">
         <Link to="/" className="font-bold text-primary">
-          Admin Panel
+          Quản Trị Viên
         </Link>
         {user && (
           <div className="flex items-center space-x-4">
             <Link to="/bookings" className="text-sm hover:underline">
-              Bookings
+              Đặt Sân
             </Link>
             {user.role === 'manager' && (
               <Link to="/permissions" className="text-sm hover:underline">
-                Staff permissions
+                Phân Quyền Nhân Viên
               </Link>
             )}
             <span className="text-sm">{user.email}</span>
             <button onClick={handleLogout} className="text-sm text-destructive">
-              Logout
+              Đăng Xuất
             </button>
           </div>
         )}

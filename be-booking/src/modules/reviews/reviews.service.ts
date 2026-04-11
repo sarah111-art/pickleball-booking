@@ -7,9 +7,15 @@ import { Review } from '../../entities/review.entity';
 export class ReviewsService {
   constructor(@InjectRepository(Review) private repo: Repository<Review>) {}
 
-  create(payload: Partial<Review>) {
-    const e = this.repo.create(payload);
-    return this.repo.save(e);
+  async create(payload: { courtId: string; userId: string; rating: number; comment?: string }) {
+    const review = this.repo.create({
+      court: { id: payload.courtId } as any,
+      user: payload.userId ? ({ id: payload.userId } as any) : null,
+      rating: payload.rating,
+      comment: payload.comment,
+    });
+
+    return this.repo.save(review);
   }
 
   findAll() {

@@ -8,19 +8,26 @@ import Navbar from "@/components/Navbar";
 import VenueSelection from "@/components/booking/VenueSelection";
 import CourtDateSelection from "@/components/booking/CourtDateSelection";
 import TimeSlotSelection from "@/components/booking/TimeSlotSelection";
+import ProductSelection from "@/components/booking/ProductSelection";
+import RacketRentalSelection from "@/components/booking/RacketRentalSelection";
 import BookingSummary from "@/components/booking/BookingSummary";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
-export type BookingStep = 1 | 2 | 3 | 4;
+export type BookingStep = 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface BookingData {
   venueId: string | null;
   venueName: string | null;
   courtId: string | null;
   courtName: string | null;
+  customerName: string;
+  customerPhone: string;
   date: Date | null;
   timeSlots: Array<{ start: string; end: string; price: number }>;
+  selectedProducts?: Array<any>;
+  selectedRentals?: Array<any>;
+  paymentPercentage: 50 | 100;
   totalAmount: number;
 }
 
@@ -41,7 +48,12 @@ const Booking = () => {
     venueId: null,
     venueName: null,
     courtId: null,
+    selectedProducts: [],
+    selectedRentals: [],
+    paymentPercentage: 50,
     courtName: null,
+    customerName: "",
+    customerPhone: "",
     date: null,
     timeSlots: [],
     totalAmount: 0,
@@ -54,6 +66,7 @@ const Booking = () => {
   useEffect(() => {
     if (state && !initialized) {
       const hasCourtData = state.courtId && state.venueId;
+      const hasVenueData = state.venueId;
       
       if (hasCourtData) {
         setBookingData(prev => ({
@@ -64,6 +77,16 @@ const Booking = () => {
           venueName: state.venueName || null,
         }));
         // Skip to date selection step (step 2) since we already have venue and court
+        setCurrentStep(2);
+      } else if (hasVenueData) {
+        setBookingData(prev => ({
+          ...prev,
+          venueId: state.venueId || null,
+          venueName: state.venueName || null,
+          courtId: null,
+          courtName: null,
+        }));
+        // Skip venue selection because chatbot already picked a location
         setCurrentStep(2);
       }
       setInitialized(true);
@@ -93,6 +116,11 @@ const Booking = () => {
         navigate("/auth", { state: { returnTo: "/booking", ...state } });
       } else {
         setUser(data);
+        setBookingData((prev) => ({
+          ...prev,
+          customerName: prev.customerName || data.fullName || "",
+          customerPhone: prev.customerPhone || data.phone || "",
+        }));
       }
     };
 
@@ -104,7 +132,7 @@ const Booking = () => {
   };
 
   const goToNextStep = () => {
-    if (currentStep < 4) {
+    if (currentStep < 6) {
       setCurrentStep((prev) => (prev + 1) as BookingStep);
     }
   };
@@ -120,40 +148,44 @@ const Booking = () => {
       if (!user || !bookingData.venueId || !bookingData.courtId || !bookingData.date || bookingData.timeSlots.length === 0) {
         throw new Error("Thiếu thông tin đặt sân");
       }
+      if (!bookingData.customerName.trim() || !bookingData.customerPhone.trim()) {
+        throw new Error("Vui lòng nhập tên và số điện thoại liên hệ");
+      }
 
-      // Create booking for first time slot (you may need to adjust this based on your API)
-      const firstSlot = bookingData.timeSlots[0];
+      const courtTotal = bookingData.timeSlots.reduce((sum, slot) => sum + slot.price, 0);
+      const productTotal = bookingData.selectedProducts?.reduce(
+        (sum, p) => (sum || 0) + (p.price || 0) * (p.quantity || 1),
+        0
+      ) || 0;
+      const rentalTotal = bookingData.selectedRentals?.reduce(
+        (sum, r) => (sum || 0) + (r.rentalPrice || 0) * (r.quantity || 1),
+        0
+      ) || 0;
+      const grandTotal = courtTotal + productTotal + rentalTotal;
+      const depositAmount = Math.round((grandTotal * (bookingData.paymentPercentage || 100)) / 100);
+
+      const slot = bookingData.timeSlots[0];
       
-      // Find slot ID - you may need to fetch available slots first
-      const { data: slotsData, error: slotsError } = await api.get<Array<{ id: string; start: string; end: string }>>(
-        `/courts/${bookingData.courtId}/slots?date=${bookingData.date!.toISOString().split("T")[0]}`
-      );
-
-      if (slotsError || !slotsData) {
-        throw new Error("Không thể lấy thông tin khung giờ");
-      }
-
-      const matchingSlot = slotsData.find(
-        (s) => s.start === firstSlot.start && s.end === firstSlot.end
-      );
-
-      if (!matchingSlot) {
-        throw new Error("Khung giờ không còn khả dụng");
-      }
-
       const { data, error } = await api.post<{ id: string }>("/bookings", {
         courtId: bookingData.courtId,
-        date: bookingData.date!.toISOString().split("T")[0],
-        slotId: matchingSlot.id,
+        date: bookingData.date!.toLocaleDateString("sv-SE"),
+        startTime: slot.start,
+        endTime: slot.end,
         paymentMethod: "qr",
-        note: `Đặt ${bookingData.timeSlots.length} khung giờ`,
+        customerName: bookingData.customerName,
+        customerPhone: bookingData.customerPhone,
+        paymentPercentage: bookingData.paymentPercentage,
+        totalAmount: grandTotal,
+        depositAmount: depositAmount,
+        selectedProducts: bookingData.selectedProducts || [],
+        selectedRentals: bookingData.selectedRentals || [],
+        note: `Đặt sân từ ${slot.start} đến ${slot.end}`,
       });
 
       if (error) throw new Error(error);
 
       if (data?.id) {
-        // Redirect to payment page
-        navigate(`/payment?bookingId=${data.id}`);
+        navigate(`/payment-success?bookingId=${data.id}`);
       } else {
         throw new Error("Không nhận được ID booking");
       }
@@ -167,11 +199,11 @@ const Booking = () => {
     }
   };
 
+  const stepLabels = ["Địa điểm", "Sân & Ngày", "Giờ", "Sản phẩm", "Vợt thuê", "Xác nhận"];
+
   if (!user) {
     return null;
   }
-
-  const stepLabels = ["Địa điểm", "Sân & Ngày", "Giờ", "Xác nhận"];
 
   // Determine if we should show court info banner
   const showCourtBanner = bookingData.courtId && bookingData.courtName && currentStep === 2;
@@ -208,7 +240,7 @@ const Booking = () => {
             <div className="mb-6">
               {/* Progress bar */}
               <div className="flex items-center gap-1 sm:gap-2 mb-2">
-                {[1, 2, 3, 4].map((step) => (
+                {[1, 2, 3, 4, 5, 6].map((step) => (
                   <div key={step} className="flex-1">
                     <div
                       className={`h-1.5 sm:h-2 rounded-full transition-colors ${
@@ -261,8 +293,25 @@ const Booking = () => {
           )}
 
           {currentStep === 4 && (
+            <ProductSelection
+              bookingData={bookingData}
+              updateBookingData={updateBookingData}
+              onNext={goToNextStep}
+            />
+          )}
+
+          {currentStep === 5 && (
+            <RacketRentalSelection
+              bookingData={bookingData}
+              updateBookingData={updateBookingData}
+              onNext={goToNextStep}
+            />
+          )}
+
+          {currentStep === 6 && (
             <BookingSummary
               bookingData={bookingData}
+              updateBookingData={updateBookingData}
               onConfirm={handleBookingComplete}
             />
           )}

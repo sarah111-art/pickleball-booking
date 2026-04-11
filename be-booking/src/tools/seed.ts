@@ -72,6 +72,27 @@ async function run() {
   }
   console.log(`  → ${users.length} users\n`);
 
+  // ─── 1.5. LOCATIONS ─────────────────────────────────────────────────
+  console.log('📦 Seeding locations...');
+  const locations = [
+    { name: 'Sân Pickleball Quận 1', address: '12 Lê Lợi, Quận 1, TP.HCM', mapUrl: 'https://maps.google.com/?q=10.7769,106.6963' },
+    { name: 'Sân Pickleball Bình Thạnh', address: '45 Đinh Bộ Lĩnh, Bình Thạnh, TP.HCM', mapUrl: 'https://maps.google.com/?q=10.8049,106.7437' },
+    { name: 'Sân Pickleball Thủ Đức', address: '88 Võ Văn Ngân, Thủ Đức, TP.HCM', mapUrl: 'https://maps.google.com/?q=10.8042,106.7693' },
+    { name: 'Sân Pickleball Quận 7', address: '123 Lê Thanh Tôn, Quận 7, TP.HCM', mapUrl: 'https://maps.google.com/?q=10.7423,106.7149' },
+  ];
+
+  const locationIds: string[] = [];
+  for (const loc of locations) {
+    const id = uuid();
+    locationIds.push(id);
+    await q.query(
+      `INSERT IGNORE INTO locations (id, name, address, map_url, created_at, updated_at)
+       VALUES (?, ?, ?, ?, NOW(), NOW())`,
+      [id, loc.name, loc.address, loc.mapUrl],
+    );
+  }
+  console.log(`  → ${locations.length} locations\n`);
+
   // ─── 2. COURTS ──────────────────────────────────────────────────────
   console.log('📦 Seeding courts...');
   const court1Id = uuid();
@@ -86,6 +107,7 @@ async function run() {
       province: '79', district: '760', ward: '26743', address: '12 Lê Lợi',
       surface_type: 'hard', price_per_hour: 150000,
       images: JSON.stringify(['https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800']),
+      location_id: locationIds[0],
     },
     {
       id: court2Id, court_name: 'Sân Pickleball Quận 1 - A2',
@@ -93,6 +115,7 @@ async function run() {
       province: '79', district: '760', ward: '26743', address: '12 Lê Lợi',
       surface_type: 'hard', price_per_hour: 180000,
       images: JSON.stringify(['https://images.unsplash.com/photo-1544991875-5dc1b05f5eb8?w=800']),
+      location_id: locationIds[0],
     },
     {
       id: court3Id, court_name: 'Sân Pickleball Bình Thạnh - B1',
@@ -100,6 +123,7 @@ async function run() {
       province: '79', district: '765', ward: '26908', address: '45 Đinh Bộ Lĩnh',
       surface_type: 'outdoor', price_per_hour: 120000,
       images: JSON.stringify(['https://images.unsplash.com/photo-1529926706528-db9e5010cd8e?w=800']),
+      location_id: locationIds[1],
     },
     {
       id: court4Id, court_name: 'Sân Pickleball Thủ Đức - C1',
@@ -107,14 +131,15 @@ async function run() {
       province: '79', district: '769', ward: '26998', address: '88 Võ Văn Ngân',
       surface_type: 'hard', price_per_hour: 130000,
       images: JSON.stringify(['https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800']),
+      location_id: locationIds[2],
     },
   ];
 
   for (const c of courts) {
     await q.query(
-      `INSERT IGNORE INTO courts (id, court_name, description, province, district, ward, address, surface_type, price_per_hour, images, is_active, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
-      [c.id, c.court_name, c.description, c.province, c.district, c.ward, c.address, c.surface_type, c.price_per_hour, c.images],
+      `INSERT IGNORE INTO courts (id, court_name, description, province, district, ward, address, surface_type, price_per_hour, images, location_id, is_active, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
+      [c.id, c.court_name, c.description, c.province, c.district, c.ward, c.address, c.surface_type, c.price_per_hour, c.images, c.location_id],
     );
   }
   console.log(`  → ${courts.length} courts\n`);
@@ -133,14 +158,11 @@ async function run() {
     { start: '20:00', end: '21:30' },
   ];
 
-  // Tạo timeslots cho 7 ngày tới
-  const today = new Date();
+  // Tạo timeslots cho toàn bộ tháng 4/2026 (1-30 tháng 4)
   let slotCount = 0;
   for (const court of [court1Id, court2Id, court3Id, court4Id]) {
-    for (let d = 0; d < 7; d++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + d);
-      const dateStr = date.toISOString().split('T')[0];
+    for (let day = 1; day <= 30; day++) {
+      const dateStr = `2026-04-${String(day).padStart(2, '0')}`;
 
       for (const t of timeRanges) {
         await q.query(
@@ -152,7 +174,7 @@ async function run() {
       }
     }
   }
-  console.log(`  → ${slotCount} timeslots\n`);
+  console.log(`  → ${slotCount} timeslots (toàn bộ tháng 4/2026)\n`);
 
   // ─── 4. PRODUCTS ────────────────────────────────────────────────────
   console.log('📦 Seeding products...');
@@ -216,7 +238,7 @@ async function run() {
 
   for (const r of rentals) {
     await q.query(
-      `INSERT IGNORE INTO racket_rentals (id, racketId, rentalPrice, durationHours, stock, is_active, created_at, updated_at)
+      `INSERT IGNORE INTO racket_rentals (id, racket_id, rentalPrice, durationHours, stock, is_active, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, 1, NOW(), NOW())`,
       [uuid(), r.racket_id, r.rental_price, r.duration_hours, r.stock],
     );

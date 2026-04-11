@@ -121,8 +121,8 @@ const Payment = () => {
     });
     
     setTimeout(() => {
-      navigate("/");
-    }, 2000);
+      navigate(`/payment-success?bookingId=${bookingId}`);
+    }, 1500);
   };
 
   const formatPrice = (price: number) => {

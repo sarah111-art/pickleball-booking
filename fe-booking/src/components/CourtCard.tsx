@@ -3,6 +3,7 @@ import { MapPin, Users, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface CourtCardProps {
   id?: string;
@@ -19,7 +20,17 @@ interface CourtCardProps {
 const CourtCard = ({ id, name, image, location, venueName, venueId, capacity, price, available }: CourtCardProps) => {
   const navigate = useNavigate();
 
-  const handleBooking = () => {
+  const handleViewDetail = () => {
+    if (!id) {
+      return;
+    }
+
+    navigate(`/courts/${id}`);
+  };
+
+  const handleBooking = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+
     if (available && id && venueId) {
       // Navigate to booking with court data pre-filled
       navigate("/booking", {
@@ -37,7 +48,21 @@ const CourtCard = ({ id, name, image, location, venueName, venueId, capacity, pr
   };
 
   return (
-    <Card className="overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 group">
+    <Card
+      className={cn(
+        "overflow-hidden shadow-card transition-all duration-300 hover:-translate-y-1 hover:shadow-card-hover group",
+        id ? "cursor-pointer" : "cursor-default",
+      )}
+      onClick={handleViewDetail}
+      onKeyDown={(event) => {
+        if ((event.key === "Enter" || event.key === " ") && id) {
+          event.preventDefault();
+          handleViewDetail();
+        }
+      }}
+      role={id ? "button" : undefined}
+      tabIndex={id ? 0 : -1}
+    >
       <div className="relative h-48 sm:h-64 overflow-hidden">
         <img 
           src={image} 

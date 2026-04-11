@@ -5,10 +5,10 @@ const Dashboard = () => {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-2">Welcome, {user?.email}</h1>
-      <p>Your role: {user?.role}</p>
+      <h1 className="text-2xl font-bold mb-2">Xin chào, {user?.email}</h1>
+      <p>Vai trò: {user?.role}</p>
       {user?.role === 'manager' && (
-        <p className="mt-4">As a manager you can view bookings and manage staff permissions.</p>
+        <p className="mt-4">Với vai trò quản lý, bạn có thể xem đặt sân và quản lý phân quyền nhân viên.</p>
       )}
     </div>
   );

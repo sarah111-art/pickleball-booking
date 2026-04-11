@@ -13,9 +13,9 @@ export class CourtsService {
     if (payload.images && Array.isArray(payload.images) && this.uploadSvc) {
       const out: string[] = [];
       for (const img of payload.images) {
-        if (typeof img === 'string' && img.includes('res.cloudinary.com')) {
+        if (typeof img === 'string' && (img.includes('res.cloudinary.com') || img.startsWith('http'))) {
           out.push(img);
-        } else if (typeof img === 'string') {
+        } else if (typeof img === 'string' && img.startsWith('data:image')) {
           const res = await this.uploadSvc.uploadBase64(img);
           out.push(res.url);
         }
@@ -51,9 +51,9 @@ export class CourtsService {
     if (payload.images && Array.isArray(payload.images) && this.uploadSvc) {
       const out: string[] = [];
       for (const img of payload.images) {
-        if (typeof img === 'string' && img.includes('res.cloudinary.com')) {
+        if (typeof img === 'string' && (img.includes('res.cloudinary.com') || img.startsWith('http'))) {
           out.push(img);
-        } else if (typeof img === 'string') {
+        } else if (typeof img === 'string' && img.startsWith('data:image')) {
           const res = await this.uploadSvc.uploadBase64(img);
           out.push(res.url);
         }

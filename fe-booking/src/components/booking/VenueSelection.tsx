@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Clock } from "lucide-react";
+import { MapPin } from "lucide-react";
 import type { BookingData } from "@/pages/Booking";
 
 interface VenueSelectionProps {
@@ -15,11 +15,7 @@ interface Venue {
   id: string;
   name: string;
   address: string | null;
-  city: string | null;
-  district: string | null;
-  open_time: string | null;
-  close_time: string | null;
-  description: string | null;
+  mapUrl?: string;
 }
 
 const VenueSelection = ({ bookingData, updateBookingData, onNext }: VenueSelectionProps) => {
@@ -33,12 +29,12 @@ const VenueSelection = ({ bookingData, updateBookingData, onNext }: VenueSelecti
 
   const fetchVenues = async () => {
     try {
-      const { data, error } = await api.get<Venue[]>("/venues");
+      const { data, error } = await api.get<Venue[]>("/locations");
 
       if (error) throw new Error(error);
       setVenues(data || []);
     } catch (error) {
-      console.error("Error fetching venues:", error);
+      console.error("Error fetching locations:", error);
     } finally {
       setLoading(false);
     }
@@ -107,28 +103,13 @@ const VenueSelection = ({ bookingData, updateBookingData, onNext }: VenueSelecti
                     </div>
                   )}
                 </CardTitle>
-                {venue.description && (
-                  <CardDescription>{venue.description}</CardDescription>
-                )}
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 text-sm">
-                  {(venue.address || venue.district || venue.city) && (
+                  {venue.address && (
                     <div className="flex items-start gap-2">
                       <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                      <span className="text-muted-foreground">
-                        {[venue.address, venue.district, venue.city]
-                          .filter(Boolean)
-                          .join(", ")}
-                      </span>
-                    </div>
-                  )}
-                  {venue.open_time && venue.close_time && (
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        {venue.open_time} - {venue.close_time}
-                      </span>
+                      <span className="text-muted-foreground">{venue.address}</span>
                     </div>
                   )}
                 </div>

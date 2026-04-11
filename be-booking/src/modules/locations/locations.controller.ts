@@ -20,6 +20,11 @@ export class LocationsController {
     return this.svc.findOne(id);
   }
 
+  @Get(':id/courts')
+  findCourts(@Param('id') id: string) {
+    return this.svc.findCourtsByLocation(id);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() body: any) {
     return this.svc.update(id, body);

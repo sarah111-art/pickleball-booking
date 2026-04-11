@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { ReviewsService } from './reviews.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -13,9 +13,13 @@ export class ReviewsController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Body() body: any) {
-    // body: { courtId, rating, comment }
-    return this.svc.create(body);
+  create(@Req() req: any, @Body() body: any) {
+    return this.svc.create({
+      courtId: body.courtId,
+      rating: body.rating,
+      comment: body.comment,
+      userId: req.user?.id,
+    });
   }
 
   @Get('court/:id')

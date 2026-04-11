@@ -15,27 +15,81 @@ interface Venue {
   address: string | null;
 }
 
-interface TimeSlot {
+interface Court {
+  id: string;
+  courtName: string;
+  venueId: string;
+  isActive: boolean;
+  venue?: {
+    id: string;
+    name: string;
+    district: string | null;
+  };
+}
+
+interface Booking {
   id: string;
   date: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  court?: {
+    id: string;
+  };
+}
+
+interface AvailableSlot {
+  id: string;
   start: string;
   end: string;
-  isBooked: boolean;
-  court: {
-    id: string;
-    courtName: string;
-    venueId: string;
-    venue?: {
-      id: string;
-      name: string;
-      district: string | null;
-    };
-  };
+  court: Court;
 }
 
 const Schedule = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedVenue, setSelectedVenue] = useState<string>("all");
+
+  const toMinutes = (time: string) => {
+    const [h, m] = time.split(":").map(Number);
+    return h * 60 + m;
+  };
+
+  const toTimeString = (minutes: number) => {
+    const h = Math.floor(minutes / 60)
+      .toString()
+      .padStart(2, "0");
+    const m = (minutes % 60).toString().padStart(2, "0");
+    return `${h}:${m}`;
+  };
+
+  const buildAvailableWindows = (bookedRanges: Array<{ start: string; end: string }>) => {
+    const OPEN_MINUTE = 6 * 60;
+    const CLOSE_MINUTE = 22 * 60;
+
+    const normalized = bookedRanges
+      .map((slot) => ({
+        start: Math.max(OPEN_MINUTE, toMinutes(slot.start)),
+        end: Math.min(CLOSE_MINUTE, toMinutes(slot.end)),
+      }))
+      .filter((slot) => slot.end > OPEN_MINUTE && slot.start < CLOSE_MINUTE)
+      .sort((a, b) => a.start - b.start);
+
+    const windows: Array<{ start: string; end: string }> = [];
+    let cursor = OPEN_MINUTE;
+
+    for (const slot of normalized) {
+      if (slot.start > cursor) {
+        windows.push({ start: toTimeString(cursor), end: toTimeString(slot.start) });
+      }
+      cursor = Math.max(cursor, slot.end);
+    }
+
+    if (cursor < CLOSE_MINUTE) {
+      windows.push({ start: toTimeString(cursor), end: toTimeString(CLOSE_MINUTE) });
+    }
+
+    return windows.filter((window) => window.start < window.end);
+  };
 
   const { data: venues } = useQuery({
     queryKey: ["venues"],
@@ -46,19 +100,58 @@ const Schedule = () => {
     },
   });
 
-  const { data: courtSlots } = useQuery({
+  const {
+    data: courtSlots,
+    isLoading: isSlotsLoading,
+    error: slotsError,
+  } = useQuery({
     queryKey: ["court-slots", selectedDate, selectedVenue],
     queryFn: async () => {
       if (!selectedDate) return [];
-      
-      const dateStr = selectedDate.toISOString().split("T")[0];
-      const url = selectedVenue !== "all" 
-        ? `/timeslots?date=${dateStr}&venueId=${selectedVenue}`
-        : `/timeslots?date=${dateStr}`;
-      
-      const { data, error } = await api.get<TimeSlot[]>(url);
-      if (error) throw new Error(error);
-      return data || [];
+
+      const dateStr = selectedDate.toLocaleDateString("sv-SE");
+
+      const courtsUrl =
+        selectedVenue !== "all" ? `/courts?venueId=${selectedVenue}` : "/courts";
+
+      const [courtsRes, bookingsRes] = await Promise.all([
+        api.get<Court[]>(courtsUrl),
+        api.get<Booking[]>(`/bookings?date=${dateStr}`),
+      ]);
+
+      if (courtsRes.error) throw new Error(courtsRes.error);
+      if (bookingsRes.error) throw new Error(bookingsRes.error);
+
+      const activeCourts = (courtsRes.data || []).filter((court) => court.isActive !== false);
+      const occupiedBookings = (bookingsRes.data || []).filter(
+        (booking) => booking.status !== "cancelled" && booking.court?.id,
+      );
+
+      const bookingsByCourt = occupiedBookings.reduce<Record<string, Array<{ start: string; end: string }>>>(
+        (acc, booking) => {
+          const courtId = booking.court!.id;
+          if (!acc[courtId]) acc[courtId] = [];
+          acc[courtId].push({ start: booking.startTime, end: booking.endTime });
+          return acc;
+        },
+        {},
+      );
+
+      const available: AvailableSlot[] = [];
+
+      for (const court of activeCourts) {
+        const windows = buildAvailableWindows(bookingsByCourt[court.id] || []);
+        windows.forEach((window) => {
+          available.push({
+            id: `${court.id}-${window.start}-${window.end}`,
+            start: window.start,
+            end: window.end,
+            court,
+          });
+        });
+      }
+
+      return available;
     },
     enabled: !!selectedDate,
   });
@@ -131,7 +224,13 @@ const Schedule = () => {
                         <p className="text-sm text-muted-foreground mb-4">
                           Ngày: {selectedDate.toLocaleDateString("vi-VN")}
                         </p>
-                        {courtSlots && courtSlots.length > 0 ? (
+                        {isSlotsLoading ? (
+                          <p className="text-center text-muted-foreground py-8">Đang tải lịch trống...</p>
+                        ) : slotsError ? (
+                          <p className="text-center text-destructive py-8">
+                            {(slotsError as Error).message || "Không tải được dữ liệu lịch trống"}
+                          </p>
+                        ) : courtSlots && courtSlots.length > 0 ? (
                           courtSlots.map((slot) => (
                             <div
                               key={slot.id}
@@ -146,7 +245,7 @@ const Schedule = () => {
                                 </div>
                                 <div className="text-right">
                                   <p className="font-bold text-primary">
-                                    {slot.start.slice(0, 5)} - {slot.end.slice(0, 5)}
+                                    {slot.start} - {slot.end}
                                   </p>
                                   <span className="text-xs text-accent">Còn trống</span>
                                 </div>

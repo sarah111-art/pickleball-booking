@@ -6,11 +6,30 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class BookingsController {
   constructor(private svc: BookingsService) {}
 
+  @Get('availability')
+  getAvailability(@Query('courtId') courtId: string, @Query('date') date: string) {
+    return this.svc.findAvailability(courtId, date);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Post()
   create(@Req() req: any, @Body() body: any) {
     const user = req.user;
-    return this.svc.create({ user, courtId: body.courtId, date: body.date, slotId: body.slotId, paymentMethod: body.paymentMethod, note: body.note });
+    return this.svc.create({ 
+      user, 
+      courtId: body.courtId, 
+      date: body.date, 
+      startTime: body.startTime, 
+      endTime: body.endTime, 
+      paymentMethod: body.paymentMethod, 
+      customerName: body.customerName,
+      customerPhone: body.customerPhone,
+      note: body.note,
+      totalAmount: body.totalAmount,
+      paymentPercentage: body.paymentPercentage,
+      selectedProducts: body.selectedProducts,
+      selectedRentals: body.selectedRentals 
+    });
   }
 
   @UseGuards(JwtAuthGuard)
@@ -20,8 +39,11 @@ export class BookingsController {
       userEmail: body.userEmail,
       courtId: body.courtId,
       date: body.date,
-      slotId: body.slotId,
+      startTime: body.startTime,
+      endTime: body.endTime,
       paymentMethod: body.paymentMethod,
+      customerName: body.customerName,
+      customerPhone: body.customerPhone,
       note: body.note,
     });
   }
@@ -53,7 +75,11 @@ export class BookingsController {
   update(@Param('id') id: string, @Body() body: any) {
     return this.svc.update(id, {
       date: body.date,
-      slotId: body.slotId,
+      startTime: body.startTime,
+      endTime: body.endTime,
+      courtId: body.courtId,
+      customerName: body.customerName,
+      customerPhone: body.customerPhone,
       status: body.status,
       note: body.note,
     });

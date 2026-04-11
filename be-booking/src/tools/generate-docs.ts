@@ -10,8 +10,6 @@ import { UsersController } from '../modules/users/users.controller';
 import { UsersService } from '../modules/users/users.service';
 import { CourtsController } from '../modules/courts/courts.controller';
 import { CourtsService } from '../modules/courts/courts.service';
-import { TimeSlotsController } from '../modules/timeslots/timeslots.controller';
-import { TimeSlotsService } from '../modules/timeslots/timeslots.service';
 import { BookingsController } from '../modules/bookings/bookings.controller';
 import { BookingsService } from '../modules/bookings/bookings.service';
 import { ReviewsController } from '../modules/reviews/reviews.controller';

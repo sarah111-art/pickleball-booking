@@ -6,6 +6,7 @@ import { ChatConversation } from '../../entities/chat-conversation.entity';
 import { ChatMessage } from '../../entities/chat-message.entity';
 import { Venue } from '../../entities/venue.entity';
 import { Court } from '../../entities/court.entity';
+import { Location } from '../../entities/location.entity';
 
 interface ChatRequest {
   messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
@@ -33,6 +34,8 @@ export class ChatService {
     private venueRepo: Repository<Venue>,
     @InjectRepository(Court)
     private courtRepo: Repository<Court>,
+    @InjectRepository(Location)
+    private locationRepo: Repository<Location>,
     private configService: ConfigService,
   ) {
     this.openaiApiKey = this.configService.get<string>('OPENAI_API_KEY') || '';
@@ -252,37 +255,76 @@ Ví dụ câu hỏi đầu tiên: "Chào bạn! 👋 Mình có thể giúp bạn
   }
 
   private async searchCourts(params: SearchParams) {
-    // Build query for venues with courts
-    let query = this.venueRepo
-      .createQueryBuilder('venue')
-      .leftJoinAndSelect('venue.courts', 'court', 'court.isActive = :isActive', { isActive: true });
+    const normalizedDistrict = this.normalizeText(params.district || '');
 
-    if (params.district) {
-      const districtSearch = params.district.toLowerCase().replace(/[^0-9]/g, '');
-      query = query.where('venue.district LIKE :district', { district: `%${districtSearch}%` });
-    }
+    const courts = await this.courtRepo
+      .createQueryBuilder('court')
+      .leftJoinAndSelect('court.location', 'location')
+      .leftJoinAndSelect('court.venue', 'venue')
+      .where('court.isActive = :isActive', { isActive: true })
+      .getMany();
 
-    const venues = await query.getMany();
+    const grouped = new Map<string, {
+      name: string;
+      address: string;
+      district: string;
+      courtCount: number;
+      totalPrice: number;
+      venueId: string;
+      locationId?: string;
+    }>();
 
-    // Format results
-    const results = venues
-      .filter((v) => v.courts && v.courts.length > 0)
-      .map((venue) => {
-        // Calculate average price from courts
-        const activeCourts = venue.courts.filter((c: any) => c.isActive);
-        const avgPrice = activeCourts.length > 0
-          ? Math.round(activeCourts.reduce((sum: number, c: any) => sum + (Number(c.pricePerHour) || 250000), 0) / activeCourts.length)
-          : 250000; // Default price
+    courts.forEach((court) => {
+      const location = court.location;
+      const venue = court.venue;
 
-        return {
-          name: venue.name,
-          address: `${venue.address || ''}, ${venue.district || ''}, ${venue.city || ''}`.trim().replace(/^,\s*|,\s*$/g, ''),
-          district: venue.district,
-          courtCount: activeCourts.length,
-          price: avgPrice,
-          venueId: venue.id,
-        };
+      const locationId = court.locationId || location?.id;
+      const venueId = court.venueId || venue?.id;
+      const groupId = locationId || venueId;
+      if (!groupId) return;
+
+      const name = location?.name || venue?.name || court.courtName;
+      const district = venue?.district || this.extractDistrict(location?.address || court.address || '') || '';
+      const address =
+        location?.address ||
+        `${venue?.address || ''}, ${venue?.district || ''}, ${venue?.city || ''}`.trim().replace(/^,\s*|,\s*$/g, '') ||
+        court.address ||
+        name;
+
+      const key = groupId;
+      const prev = grouped.get(key);
+      if (prev) {
+        prev.courtCount += 1;
+        prev.totalPrice += Number(court.pricePerHour) || 250000;
+      } else {
+        grouped.set(key, {
+          name,
+          address,
+          district,
+          courtCount: 1,
+          totalPrice: Number(court.pricePerHour) || 250000,
+          venueId: venueId || locationId || groupId,
+          locationId: locationId || undefined,
+        });
+      }
+    });
+
+    let results = Array.from(grouped.values()).map((item) => ({
+      name: item.name,
+      address: item.address,
+      district: item.district,
+      courtCount: item.courtCount,
+      price: Math.round(item.totalPrice / item.courtCount),
+      venueId: item.venueId,
+      locationId: item.locationId,
+    }));
+
+    if (normalizedDistrict) {
+      results = results.filter((r) => {
+        const candidate = this.normalizeText(`${r.name} ${r.address} ${r.district}`);
+        return candidate.includes(normalizedDistrict);
       });
+    }
 
     // Filter by price if specified
     if (params.maxPrice !== undefined && params.maxPrice !== null) {
@@ -298,6 +340,7 @@ Ví dụ câu hỏi đầu tiên: "Chào bạn! 👋 Mình có thể giúp bạn
 
     // Extract information from conversation
     const districtMatch = allMessages.match(/(?:quận|q|district)\s*(\d+)/i);
+    const districtNameMatch = allMessages.match(/(thủ đức|thu duc|bình thạnh|binh thanh|gò vấp|go vap|phú nhuận|phu nhuan|quận\s*\d+|q\s*\d+)/i);
     const priceMatch = allMessages.match(/(\d+)\s*(?:k|nghìn|triệu)/i);
     const timeMatch = allMessages.match(/(sáng|chiều|tối|morning|afternoon|evening)/i);
 
@@ -310,6 +353,8 @@ Ví dụ câu hỏi đầu tiên: "Chào bạn! 👋 Mình có thể giúp bạn
       
       if (districtMatch) {
         params.district = `Quận ${districtMatch[1]}`;
+      } else if (districtNameMatch) {
+        params.district = districtNameMatch[1];
       }
       
       if (priceMatch) {
@@ -373,6 +418,23 @@ Ví dụ câu hỏi đầu tiên: "Chào bạn! 👋 Mình có thể giúp bạn
     message += 'Bạn có thể click "Đặt ngay" để đặt sân ngay nhé! 🎾';
     
     return message;
+  }
+
+  private normalizeText(input: string) {
+    return (input || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private extractDistrict(address: string) {
+    const raw = address || '';
+    const m = raw.match(/(Quận\s*\d+|Q\s*\d+|Thủ\s*Đức|Thu\s*Duc|Bình\s*Thạnh|Binh\s*Thanh|Gò\s*Vấp|Go\s*Vap|Phú\s*Nhuận|Phu\s*Nhuan)/i);
+    return m?.[1] || '';
   }
 }
 

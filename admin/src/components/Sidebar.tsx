@@ -8,16 +8,16 @@ import {
   LogOut,
   User,
   Grid3x3,
-  Clock,
   MapPin,
   CreditCard,
   MessageSquare,
   Package,
   Zap,
+  Settings2,
 } from 'lucide-react';
 
 const Sidebar = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -29,80 +29,106 @@ const Sidebar = () => {
   const navItems = [
     {
       href: '/',
-      label: 'Dashboard',
+      label: 'Tổng Quan',
       icon: LayoutDashboard,
+      section: 'dashboard',
     },
     {
       href: '/bookings',
-      label: 'Bookings',
+      label: 'Đặt Sân',
       icon: Calendar,
+      section: 'bookings',
     },
     {
       href: '/courts',
-      label: 'Courts',
+      label: 'Sân Pickleball',
       icon: Grid3x3,
-    },
-    {
-      href: '/timeslots',
-      label: 'Timeslots',
-      icon: Clock,
+      section: 'courts',
     },
     {
       href: '/users',
-      label: 'Users',
+      label: 'Người Dùng',
       icon: Users,
+      section: 'users',
     },
     {
       href: '/locations',
-      label: 'Locations',
+      label: 'Địa Điểm',
       icon: MapPin,
+      section: 'locations',
     },
     {
       href: '/payments',
-      label: 'Payments',
+      label: 'Thanh Toán',
       icon: CreditCard,
+      section: 'payments',
     },
     {
       href: '/reviews',
-      label: 'Reviews',
+      label: 'Đánh Giá',
       icon: MessageSquare,
+      section: 'reviews',
     },
     {
       href: '/products',
-      label: 'Products',
+      label: 'Sản Phẩm',
       icon: Package,
+      section: 'products',
     },
     {
       href: '/rackets',
-      label: 'Rackets',
+      label: 'Vợt Bán',
       icon: Zap,
+      section: 'rackets',
     },
     {
       href: '/racket-rentals',
-      label: 'Racket Rentals',
+      label: 'Cho Thuê Vợt',
       icon: Zap,
+      section: 'racket_rentals',
+    },
+    {
+      href: '/racket-orders',
+      label: 'Đơn Vợt',
+      icon: Package,
+      section: 'racket_orders',
+    },
+    {
+      href: '/news',
+      label: 'Tin Tức',
+      icon: MessageSquare,
+      section: 'news',
+    },
+    {
+      href: '/settings',
+      label: 'Cài Đặt Hệ Thống',
+      icon: Settings2,
+      section: 'settings',
     },
   ];
 
   if (user?.role === 'manager') {
     navItems.push({
       href: '/permissions',
-      label: 'Staff Permissions',
+      label: 'Phân Quyền Nhân Viên',
       icon: Users,
+      section: 'staff',
     });
   }
+
+  const visibleNavItems = navItems.filter((item) => !item.section || hasPermission(item.section, 'view'));
 
   return (
     <div className="w-64 bg-card border-r border-border flex flex-col h-screen">
       {/* Header */}
       <div className="p-6 border-b border-border">
-        <h1 className="text-xl font-bold text-primary">Admin Panel</h1>
+        <h1 className="text-xl font-bold text-primary">Quản Trị</h1>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 p-4">
         <ul className="space-y-2">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.href;
             return (
@@ -140,7 +166,7 @@ const Sidebar = () => {
             className="flex items-center gap-3 w-full px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md transition-colors"
           >
             <LogOut className="h-4 w-4" />
-            Logout
+            Đăng Xuất
           </button>
         </div>
       )}

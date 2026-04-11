@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { X, Trash2 } from "lucide-react";
 import { vietnamProvinces, getDistrictsByProvince, getWardsByDistrict } from "@/lib/vietnamProvinces";
+import { uploadImageToCloudinary } from "@/lib/upload-image";
 
 interface Location {
   id: string;
@@ -14,6 +15,7 @@ interface Court {
   id: string;
   courtName: string;
   description?: string;
+  pricePerHour: number | string;
   images?: string[];
   locationId?: string;
   location?: Location;
@@ -30,11 +32,14 @@ const Courts = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [editCourtId, setEditCourtId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const [formData, setFormData] = useState({
     courtName: "",
     description: "",
+    pricePerHour: "" as string | number,
     imageUrl: "",
     locationId: "",
     province: "",
@@ -66,7 +71,39 @@ const Courts = () => {
     }
   };
 
-  const handleCreateCourt = async (e: React.FormEvent) => {
+  const handleOpenEdit = (court: Court) => {
+    setEditCourtId(court.id);
+    setFormData({
+      courtName: court.courtName,
+      description: court.description || "",
+      pricePerHour: court.pricePerHour,
+      imageUrl: court.images?.[0] || "",
+      locationId: court.locationId || "",
+      province: court.province || "",
+      district: court.district || "",
+      ward: court.ward || "",
+      address: court.address || "",
+    });
+    setShowModal(true);
+  };
+
+  const handleOpenCreate = () => {
+    setEditCourtId(null);
+    setFormData({
+      courtName: "",
+      description: "",
+      pricePerHour: "",
+      imageUrl: "",
+      locationId: "",
+      province: "",
+      district: "",
+      ward: "",
+      address: "",
+    });
+    setShowModal(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.courtName) {
       setError("Vui lòng nhập tên sân");
@@ -83,31 +120,30 @@ const Courts = () => {
     }
 
     setDeleting(true);
-    const { data, error: err } = await api.post("/courts", {
+    const payload = {
       courtName: formData.courtName,
       description: formData.description || undefined,
       images: formData.imageUrl ? [formData.imageUrl] : undefined,
+      pricePerHour: formData.pricePerHour ? parseFloat(formData.pricePerHour.toString()) : 0,
       locationId: formData.locationId || undefined,
       province: formData.province || undefined,
       district: formData.district || undefined,
       ward: formData.ward || undefined,
       address: finalAddress || undefined,
-    });
+    };
+
+    const { data, error: err } = editCourtId 
+      ? await api.put(`/courts/${editCourtId}`, payload)
+      : await api.post("/courts", payload);
 
     if (err) {
       setError(err);
     } else {
-      setCourts([...courts, data as Court]);
-      setFormData({ 
-        courtName: "", 
-        description: "", 
-        imageUrl: "", 
-        locationId: "", 
-        province: "", 
-        district: "", 
-        ward: "", 
-        address: "" 
-      });
+      if (editCourtId) {
+        setCourts(courts.map(c => c.id === editCourtId ? (data as Court) : c));
+      } else {
+        setCourts([...courts, data as Court]);
+      }
       setShowModal(false);
       setError(null);
     }
@@ -127,12 +163,26 @@ const Courts = () => {
     setDeleting(false);
   };
 
+  const handleImageUpload = async (file?: File) => {
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const url = await uploadImageToCloudinary(file);
+      setFormData((prev) => ({ ...prev, imageUrl: url }));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Upload ảnh thất bại";
+      setError(message);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Quản lý Sân</h1>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={handleOpenCreate}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
         >
           + Tạo Sân
@@ -160,22 +210,26 @@ const Courts = () => {
               )}
               <div className="p-4">
                 <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 pointer-events-none">
                     <h3 className="font-semibold text-lg">{court.courtName}</h3>
                     {court.description && (
                       <p className="text-sm text-gray-500 mt-1 line-clamp-2">{court.description}</p>
                     )}
                     
+                    <p className="text-blue-600 font-bold mt-2">
+                      {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(court.pricePerHour))} / giờ
+                    </p>
+
                     {/* Hiển thị Location nếu có */}
                     {court.locationId && (
-                      <p className="text-sm text-blue-600 mt-2">
+                      <p className="text-sm text-gray-600 mt-1">
                         📍 {court.location?.name || "Location#" + court.locationId.slice(0, 8)}
                       </p>
                     )}
                     
                     {/* Địa chỉ cụ thể */}
                     {court.address && (
-                      <p className="text-sm text-gray-700 mt-1 font-medium">
+                      <p className="text-sm text-gray-700 mt-1 font-medium italic">
                         {court.address}
                       </p>
                     )}
@@ -196,13 +250,23 @@ const Courts = () => {
                       </p>
                     )}
                   </div>
-                  <button
-                    onClick={() => handleDeleteCourt(court.id)}
-                    disabled={deleting}
-                    className="p-2 hover:bg-red-100 rounded transition text-red-600 flex-shrink-0"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => handleOpenEdit(court)}
+                      className="p-2 hover:bg-blue-100 rounded transition text-blue-600 flex-shrink-0"
+                      title="Chỉnh sửa"
+                    >
+                      Sửa
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCourt(court.id)}
+                      disabled={deleting}
+                      className="p-2 hover:bg-red-100 rounded transition text-red-600 flex-shrink-0"
+                      title="Xóa"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -212,7 +276,7 @@ const Courts = () => {
 
       {showModal && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
           onClick={() => setShowModal(false)}
         >
           <div
@@ -220,7 +284,7 @@ const Courts = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Tạo Sân Mới</h3>
+              <h3 className="text-lg font-semibold">{editCourtId ? "Chỉnh sửa Sân" : "Tạo Sân Mới"}</h3>
               <button
                 onClick={() => setShowModal(false)}
                 className="p-1 hover:bg-gray-100 rounded transition"
@@ -229,46 +293,77 @@ const Courts = () => {
               </button>
             </div>
 
-            <form onSubmit={handleCreateCourt} className="space-y-4">
-              <input
-                type="text"
-                placeholder="Tên sân *"
-                required
-                className="w-full border p-2 rounded"
-                value={formData.courtName}
-                onChange={(e) =>
-                  setFormData((p) => ({
-                    ...p,
-                    courtName: e.target.value,
-                  }))
-                }
-              />
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Tên sân *</label>
+                <input
+                  type="text"
+                  placeholder="Nhập tên sân"
+                  required
+                  className="w-full border p-2 rounded"
+                  value={formData.courtName}
+                  onChange={(e) =>
+                    setFormData((p) => ({
+                      ...p,
+                      courtName: e.target.value,
+                    }))
+                  }
+                />
+              </div>
 
-              <textarea
-                placeholder="Mô tả sân (tùy chọn)"
-                rows={3}
-                className="w-full border p-2 rounded resize-none"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData((p) => ({
-                    ...p,
-                    description: e.target.value,
-                  }))
-                }
-              />
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Giá thuê (VND/giờ) *</label>
+                  <input
+                    type="number"
+                    placeholder="VD: 150000"
+                    required
+                    min="0"
+                    step="1000"
+                    className="w-full border p-2 rounded"
+                    value={formData.pricePerHour}
+                    onChange={(e) =>
+                      setFormData((p) => ({
+                        ...p,
+                        pricePerHour: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
 
-              <input
-                type="url"
-                placeholder="URL hình ảnh (tùy chọn)"
-                className="w-full border p-2 rounded"
-                value={formData.imageUrl}
-                onChange={(e) =>
-                  setFormData((p) => ({
-                    ...p,
-                    imageUrl: e.target.value,
-                  }))
-                }
-              />
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Mô tả</label>
+                <textarea
+                  placeholder="Mô tả sân (tùy chọn)"
+                  rows={3}
+                  className="w-full border p-2 rounded resize-none"
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData((p) => ({
+                      ...p,
+                      description: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Ảnh sân (Cloudinary)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="w-full border p-2 rounded"
+                  onChange={(e) => handleImageUpload(e.target.files?.[0])}
+                />
+                <input
+                  type="text"
+                  className="w-full border p-2 rounded bg-gray-50"
+                  value={formData.imageUrl}
+                  readOnly
+                  placeholder={uploadingImage ? "Đang upload ảnh..." : "URL ảnh sau khi upload sẽ hiện ở đây"}
+                />
+              </div>
               {formData.imageUrl && (
                 <img
                   src={formData.imageUrl}
@@ -398,9 +493,9 @@ const Courts = () => {
               <button
                 type="submit"
                 disabled={deleting}
-                className="w-full bg-black text-white p-2 rounded hover:bg-gray-800 transition disabled:opacity-50"
+                className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:opacity-50 font-semibold"
               >
-                {deleting ? "Đang tạo..." : "Tạo Sân"}
+                {deleting ? "Đang xử lý..." : (editCourtId ? "Lưu thay đổi" : "Tạo Sân")}
               </button>
             </form>
           </div>

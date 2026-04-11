@@ -26,10 +26,21 @@ const Login = () => {
 
     localStorage.setItem('accessToken', data.accessToken);
 
-    // Decode role from JWT payload
     try {
-      const payload = JSON.parse(atob(data.accessToken.split('.')[1]));
-      login({ email: payload.email ?? email, role: payload.role ?? 'staff' });
+      const profileRes = await api.get<{
+        id: string;
+        email: string;
+        role: 'manager' | 'staff';
+        fullName?: string;
+        permissions?: Array<{ section: string; actions: Array<'view' | 'add' | 'edit' | 'delete'> }>;
+      }>('/auth/profile');
+
+      if (profileRes.data) {
+        login(profileRes.data);
+      } else {
+        const payload = JSON.parse(atob(data.accessToken.split('.')[1]));
+        login({ email: payload.email ?? email, role: payload.role ?? 'staff' });
+      }
     } catch {
       login({ email, role: 'staff' });
     }

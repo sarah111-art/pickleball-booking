@@ -18,26 +18,28 @@ interface StaffMember {
 }
 
 const ALL_SECTIONS = [
-  { key: 'dashboard', label: 'Dashboard', icon: '📊' },
-  { key: 'bookings', label: 'Bookings', icon: '📅' },
-  { key: 'courts', label: 'Courts', icon: '🏸' },
-  { key: 'timeslots', label: 'Timeslots', icon: '⏰' },
-  { key: 'locations', label: 'Locations', icon: '📍' },
-  { key: 'users', label: 'Users', icon: '👥' },
-  { key: 'payments', label: 'Payments', icon: '💳' },
-  { key: 'products', label: 'Products', icon: '🎾' },
-  { key: 'rackets', label: 'Rackets', icon: '🏑' },
-  { key: 'racket_rentals', label: 'Racket Rentals', icon: '🔄' },
-  { key: 'reviews', label: 'Reviews', icon: '⭐' },
-  { key: 'staff', label: 'Staff Permissions', icon: '👮' },
+  { key: 'dashboard', label: 'Tổng Quan', icon: '📊' },
+  { key: 'bookings', label: 'Đặt Sân', icon: '📅' },
+  { key: 'courts', label: 'Sân Pickleball', icon: '🏸' },
+  { key: 'timeslots', label: 'Khung Giờ', icon: '⏰' },
+  { key: 'locations', label: 'Địa Điểm', icon: '📍' },
+  { key: 'users', label: 'Người Dùng', icon: '👥' },
+  { key: 'payments', label: 'Thanh Toán', icon: '💳' },
+  { key: 'products', label: 'Sản Phẩm', icon: '🎾' },
+  { key: 'rackets', label: 'Vợt Bán', icon: '🏑' },
+  { key: 'racket_rentals', label: 'Cho Thuê Vợt', icon: '🔄' },
+  { key: 'racket_orders', label: 'Đơn Vợt', icon: '📦' },
+  { key: 'news', label: 'Tin Tức', icon: '📰' },
+  { key: 'reviews', label: 'Đánh Giá', icon: '⭐' },
+  { key: 'staff', label: 'Phân Quyền Nhân Viên', icon: '👮' },
 ];
 
 const PERMISSION_LEVELS = [
-  { value: 'none', label: 'No Access', color: 'bg-slate-100 text-slate-600' },
-  { value: 'view', label: 'View Only', color: 'bg-blue-100 text-blue-700' },
-  { value: 'add', label: 'Add Only', color: 'bg-green-100 text-green-700' },
-  { value: 'edit', label: 'View + Add + Edit', color: 'bg-yellow-100 text-yellow-700' },
-  { value: 'full', label: 'Full Access', color: 'bg-purple-100 text-purple-700' },
+  { value: 'none', label: 'Không Có Quyền', color: 'bg-slate-100 text-slate-600' },
+  { value: 'view', label: 'Chỉ Xem', color: 'bg-blue-100 text-blue-700' },
+  { value: 'add', label: 'Chỉ Thêm', color: 'bg-green-100 text-green-700' },
+  { value: 'edit', label: 'Xem + Thêm + Sửa', color: 'bg-yellow-100 text-yellow-700' },
+  { value: 'full', label: 'Toàn Quyền', color: 'bg-purple-100 text-purple-700' },
 ];
 
 const getPermissionLevel = (actions: PermissionAction[]): string => {
@@ -65,15 +67,27 @@ const StaffPermissions = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordDialog, setPasswordDialog] = useState<{ open: boolean; staffId: string | null; staffName: string }>(
+    { open: false, staffId: null, staffName: '' }
+  );
+  const [passwordValue, setPasswordValue] = useState('');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   useEffect(() => {
     fetchStaff();
   }, []);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timeout = window.setTimeout(() => setNotice(null), 3000);
+    return () => window.clearTimeout(timeout);
+  }, [notice]);
 
   const fetchStaff = async () => {
     setLoading(true);
@@ -85,10 +99,10 @@ const StaffPermissions = () => {
           permissions: ensureAllSections(s.permissions)
         })));
       } else {
-        setError(res.error || 'Failed to load staff permissions');
+        setError(res.error || 'Không thể tải danh sách phân quyền nhân viên');
       }
     } catch (err) {
-      setError('Failed to load staff permissions');
+      setError('Không thể tải danh sách phân quyền nhân viên');
     }
     setLoading(false);
   };
@@ -149,17 +163,23 @@ const StaffPermissions = () => {
       });
       
       if (!res.data) {
-        alert('Failed to save: ' + res.error);
+        setNotice({ type: 'error', message: 'Lưu thất bại: ' + res.error });
+      } else {
+        setNotice({ type: 'success', message: 'Đã lưu phân quyền thành công' });
       }
     } catch (err) {
-      alert('Failed to save permissions');
+      setNotice({ type: 'error', message: 'Không thể lưu phân quyền' });
     }
     setSaving(null);
   };
 
   const addNewStaff = async () => {
     if (!newEmail.trim()) {
-      alert('Email is required');
+      alert('Email là bắt buộc');
+      return;
+    }
+    if (!newPassword || newPassword.length < 6) {
+      alert('Mật khẩu tối thiểu 6 ký tự');
       return;
     }
     
@@ -167,6 +187,7 @@ const StaffPermissions = () => {
       const res = await api.post<StaffMember>('/staff-permissions', {
         email: newEmail.trim(),
         name: newName.trim() || undefined,
+        password: newPassword,
         permissions: ALL_SECTIONS.map(s => ({ section: s.key, actions: [] }))
       });
       
@@ -175,26 +196,49 @@ const StaffPermissions = () => {
         setAddDialogOpen(false);
         setNewEmail('');
         setNewName('');
+        setNewPassword('');
+        setNotice({ type: 'success', message: 'Đã thêm nhân viên thành công' });
       } else {
-        alert('Failed to add staff: ' + res.error);
+        setNotice({ type: 'error', message: 'Thêm nhân viên thất bại: ' + res.error });
       }
     } catch (err) {
-      alert('Failed to add staff member');
+      setNotice({ type: 'error', message: 'Không thể thêm nhân viên' });
+    }
+  };
+
+  const changeStaffPassword = async () => {
+    if (!passwordDialog.staffId) return;
+    if (!passwordValue || passwordValue.length < 6) {
+      setNotice({ type: 'error', message: 'Mật khẩu mới tối thiểu 6 ký tự' });
+      return;
+    }
+
+    const res = await api.put(`/staff-permissions/${passwordDialog.staffId}/password`, {
+      password: passwordValue,
+    });
+
+    if (res.data) {
+      setNotice({ type: 'success', message: 'Đổi mật khẩu thành công' });
+      setPasswordDialog({ open: false, staffId: null, staffName: '' });
+      setPasswordValue('');
+    } else {
+      setNotice({ type: 'error', message: 'Đổi mật khẩu thất bại: ' + res.error });
     }
   };
 
   const removeStaff = async (staffId: string) => {
-    if (!confirm('Are you sure you want to remove this staff member?')) return;
+    if (!confirm('Bạn chắc chắn muốn xóa nhân viên này?')) return;
     
     try {
       const res = await api.delete(`/staff-permissions/${staffId}`);
       if (res.data) {
         setStaff(prev => prev.filter(s => s.id !== staffId));
+        setNotice({ type: 'success', message: 'Đã xóa nhân viên thành công' });
       } else {
-        alert('Failed to remove: ' + res.error);
+        setNotice({ type: 'error', message: 'Xóa thất bại: ' + res.error });
       }
     } catch (err) {
-      alert('Failed to remove staff member');
+      setNotice({ type: 'error', message: 'Không thể xóa nhân viên' });
     }
   };
 
@@ -226,7 +270,7 @@ const StaffPermissions = () => {
           onClick={fetchStaff}
           className="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:opacity-90"
         >
-          Retry
+          Thử Lại
         </button>
       </div>
     );
@@ -234,20 +278,33 @@ const StaffPermissions = () => {
 
   return (
     <div className="p-6 space-y-6">
+      {notice && (
+        <div
+          className={cn(
+            'rounded-lg px-4 py-3 text-sm font-medium border',
+            notice.type === 'success'
+              ? 'bg-green-50 text-green-700 border-green-200'
+              : 'bg-red-50 text-red-700 border-red-200'
+          )}
+        >
+          {notice.message}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            👮 Staff Permissions
+            👮 Phân Quyền Nhân Viên
           </h1>
-          <p className="text-muted-foreground">Manage staff access and permissions</p>
+          <p className="text-muted-foreground">Quản lý quyền truy cập của nhân viên</p>
         </div>
         
         <button
           onClick={() => setAddDialogOpen(true)}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:opacity-90"
         >
-          <span>+</span> Add Staff
+          <span>+</span> Thêm Nhân Viên
         </button>
       </div>
 
@@ -255,7 +312,7 @@ const StaffPermissions = () => {
       <div className="relative">
         <input
           type="text"
-          placeholder="Search staff by email or name..."
+          placeholder="Tìm nhân viên theo email hoặc tên..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-10 pr-4 py-2 border rounded-lg bg-background"
@@ -268,7 +325,7 @@ const StaffPermissions = () => {
         {filteredStaff.length === 0 ? (
           <div className="text-center py-12 border rounded-lg">
             <span className="text-4xl">👥</span>
-            <p className="mt-4 text-muted-foreground">No staff members found</p>
+            <p className="mt-4 text-muted-foreground">Không tìm thấy nhân viên nào</p>
           </div>
         ) : (
           filteredStaff.map((member) => {
@@ -287,12 +344,18 @@ const StaffPermissions = () => {
                         </span>
                       </div>
                       <div>
-                        <h3 className="font-medium">{member.name || 'Unnamed'}</h3>
+                        <h3 className="font-medium">{member.name || 'Chưa đặt tên'}</h3>
                         <p className="text-sm text-muted-foreground">{member.email}</p>
                       </div>
                     </div>
                     
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setPasswordDialog({ open: true, staffId: member.id, staffName: member.name || member.email })}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded text-sm border hover:bg-muted"
+                      >
+                        🔐 Đổi mật khẩu
+                      </button>
                       <button
                         onClick={() => savePermissions(member.id)}
                         disabled={saving !== null}
@@ -303,13 +366,13 @@ const StaffPermissions = () => {
                             : "border hover:bg-muted"
                         )}
                       >
-                        💾 {saving === member.id ? 'Saving...' : 'Save'}
+                        💾 {saving === member.id ? 'Đang lưu...' : 'Lưu'}
                       </button>
                       
                       <button
                         onClick={() => removeStaff(member.id)}
                         className="p-1.5 text-destructive hover:bg-destructive/10 rounded"
-                        title="Remove staff"
+                        title="Xóa nhân viên"
                       >
                         🗑️
                       </button>
@@ -344,7 +407,7 @@ const StaffPermissions = () => {
                     onClick={() => setExpandedRow(expandedRow === member.id ? null : member.id)}
                     className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
                   >
-                    {expandedRow === member.id ? '▼ Hide' : '▶ Show'} Permissions
+                    {expandedRow === member.id ? '▼ Ẩn' : '▶ Hiện'} Quyền
                   </button>
 
                   {/* Full Permission Matrix */}
@@ -353,9 +416,9 @@ const StaffPermissions = () => {
                       <table className="w-full text-sm">
                         <thead className="bg-muted">
                           <tr>
-                            <th className="text-left p-3 font-medium">Section</th>
-                            <th className="text-left p-3 font-medium">Quick Set</th>
-                            <th className="text-left p-3 font-medium">Actions</th>
+                            <th className="text-left p-3 font-medium">Chức Năng</th>
+                            <th className="text-left p-3 font-medium">Đặt Nhanh</th>
+                            <th className="text-left p-3 font-medium">Hành Động</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -406,10 +469,10 @@ const StaffPermissions = () => {
                                             className="w-4 h-4"
                                           />
                                           <span className={cn(
-                                            "capitalize",
+                                            "",
                                             isChecked ? 'text-foreground' : 'text-muted-foreground'
                                           )}>
-                                            {action}
+                                            {{ view: 'Xem', add: 'Thêm', edit: 'Sửa', delete: 'Xóa' }[action] ?? action}
                                           </span>
                                         </label>
                                       );
@@ -434,14 +497,14 @@ const StaffPermissions = () => {
       {addDialogOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-background rounded-lg p-6 w-full max-w-md shadow-xl">
-            <h2 className="text-lg font-semibold mb-4">Add New Staff Member</h2>
+            <h2 className="text-lg font-semibold mb-4">Thêm Nhân Viên Mới</h2>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Name (optional)</label>
+                <label className="block text-sm font-medium mb-1">Tên (không bắt buộc)</label>
                 <input
                   type="text"
-                  placeholder="Enter name"
+                  placeholder="Nhập tên"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg"
@@ -457,6 +520,16 @@ const StaffPermissions = () => {
                   className="w-full px-3 py-2 border rounded-lg"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Mật khẩu *</label>
+                <input
+                  type="password"
+                  placeholder="Nhập mật khẩu (>= 6 ký tự)"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
             </div>
             
             <div className="flex justify-end gap-2 mt-6">
@@ -464,13 +537,53 @@ const StaffPermissions = () => {
                 onClick={() => setAddDialogOpen(false)}
                 className="px-4 py-2 border rounded-lg hover:bg-muted"
               >
-                Cancel
+                Hủy
               </button>
               <button
                 onClick={addNewStaff}
                 className="px-4 py-2 bg-primary text-white rounded-lg hover:opacity-90"
               >
-                Add Staff
+                Thêm Nhân Viên
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {passwordDialog.open && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background rounded-lg p-6 w-full max-w-md shadow-xl">
+            <h2 className="text-lg font-semibold mb-2">Đổi Mật Khẩu Nhân Viên</h2>
+            <p className="text-sm text-muted-foreground mb-4">Nhân viên: {passwordDialog.staffName}</p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Mật khẩu mới *</label>
+                <input
+                  type="password"
+                  placeholder="Nhập mật khẩu mới (>= 6 ký tự)"
+                  value={passwordValue}
+                  onChange={(e) => setPasswordValue(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => {
+                  setPasswordDialog({ open: false, staffId: null, staffName: '' });
+                  setPasswordValue('');
+                }}
+                className="px-4 py-2 border rounded-lg hover:bg-muted"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={changeStaffPassword}
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:opacity-90"
+              >
+                Cập nhật mật khẩu
               </button>
             </div>
           </div>
@@ -478,7 +591,7 @@ const StaffPermissions = () => {
       )}
 
       <p className="text-sm text-muted-foreground text-center">
-        * Only users with Staff Permissions access can modify these settings.
+        * Chỉ người dùng có quyền Phân Quyền Nhân Viên mới có thể thay đổi cài đặt này.
       </p>
     </div>
   );
