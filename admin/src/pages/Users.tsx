@@ -18,11 +18,16 @@ const Users = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    email: string;
+    fullName: string;
+    phone: string;
+    role: "admin" | "manager" | "staff" | "user";
+  }>({
     email: "",
     fullName: "",
     phone: "",
-    role: "user" as const,
+    role: "user",
   });
 
   useEffect(() => {

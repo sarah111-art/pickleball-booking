@@ -22,10 +22,18 @@ const Products = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    description: string;
+    category: "snack" | "drink" | "water" | "other";
+    price: number;
+    stock: number;
+    image: string;
+    isActive: boolean;
+  }>({
     name: "",
     description: "",
-    category: "snack" as const,
+    category: "snack",
     price: 0,
     stock: 0,
     image: "",

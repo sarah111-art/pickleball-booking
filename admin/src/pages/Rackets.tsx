@@ -24,9 +24,18 @@ const Rackets = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    type: "beginner" | "intermediate" | "professional";
+    description: string;
+    price: number;
+    stock: number;
+    brand: string;
+    image: string;
+    isActive: boolean;
+  }>({
     name: "",
-    type: "beginner" as const,
+    type: "beginner",
     description: "",
     price: 0,
     stock: 0,
