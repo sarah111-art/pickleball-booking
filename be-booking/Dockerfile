@@ -15,16 +15,17 @@ COPY . .
 # Build the application
 RUN npm run build
 
+# Remove dev dependencies after build so runtime image only keeps production deps
+RUN npm prune --omit=dev
+
 # Production stage
 FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-
-# Install only production dependencies
-RUN npm ci --omit=dev --legacy-peer-deps
+# Copy production artifacts from builder
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
