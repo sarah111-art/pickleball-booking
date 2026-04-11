@@ -47,15 +47,15 @@ const Auth = () => {
           const { error } = await auth.loginWithGoogle(resp.credential);
           if (error) {
             toast({
-              title: "Dang nhap Google that bai",
+              title: "Đăng nhập Google thất bại",
               description: error,
               variant: "destructive",
             });
             return;
           }
           toast({
-            title: "Dang nhap thanh cong",
-            description: "Chao mung ban quay tro lai!",
+            title: "Đăng nhập thành công",
+            description: "Chào mừng bạn quay trở lại!",
           });
           navigate("/");
         },
@@ -177,8 +177,8 @@ const Auth = () => {
     e.preventDefault();
     if (!forgotEmail) {
       toast({
-        title: "Loi",
-        description: "Vui long nhap email de nhan link dat lai mat khau",
+        title: "Lỗi",
+        description: "Vui lòng nhập email để nhận link đặt lại mật khẩu",
         variant: "destructive",
       });
       return;
@@ -188,14 +188,14 @@ const Auth = () => {
     const { error } = await auth.forgotPassword(forgotEmail);
     if (error) {
       toast({
-        title: "Khong gui duoc email",
+        title: "Không gửi được email",
         description: error,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Da gui link dat lai mat khau",
-        description: "Vui long kiem tra hop thu email cua ban",
+        title: "Đã gửi link đặt lại mật khẩu",
+        description: "Vui lòng kiểm tra hộp thư email của bạn",
       });
       setForgotEmail("");
     }
@@ -264,21 +264,21 @@ const Auth = () => {
                     <div ref={googleButtonRef} />
                   </div>
                 ) : (
-                  <p className="text-xs text-center text-muted-foreground">Dang nhap Google chua duoc cau hinh</p>
+                  <p className="text-xs text-center text-muted-foreground">Đăng nhập Google chưa được cấu hình</p>
                 )}
               </form>
 
               <form onSubmit={handleForgotPassword} className="mt-4 border-t pt-4 space-y-2">
-                <p className="text-sm font-medium">Quen mat khau?</p>
+                <p className="text-sm font-medium">Quên mật khẩu?</p>
                 <Input
                   type="email"
-                  placeholder="Nhap email de nhan link doi mat khau"
+                  placeholder="Nhập email để nhận link đổi mật khẩu"
                   value={forgotEmail}
                   onChange={(e) => setForgotEmail(e.target.value)}
                   disabled={forgotLoading}
                 />
                 <Button type="submit" variant="outline" className="w-full" disabled={forgotLoading}>
-                  {forgotLoading ? "Dang gui..." : "Gui link dat lai mat khau"}
+                  {forgotLoading ? "Đang gửi..." : "Gửi link đặt lại mật khẩu"}
                 </Button>
               </form>
             </TabsContent>

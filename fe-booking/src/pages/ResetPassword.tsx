@@ -21,8 +21,8 @@ const ResetPassword = () => {
 
     if (!token) {
       toast({
-        title: "Link khong hop le",
-        description: "Thieu token dat lai mat khau",
+        title: "Link không hợp lệ",
+        description: "Thiếu token đặt lại mật khẩu",
         variant: "destructive",
       });
       return;
@@ -30,8 +30,8 @@ const ResetPassword = () => {
 
     if (password.length < 6) {
       toast({
-        title: "Mat khau qua ngan",
-        description: "Mat khau can it nhat 6 ky tu",
+        title: "Mật khẩu quá ngắn",
+        description: "Mật khẩu cần ít nhất 6 ký tự",
         variant: "destructive",
       });
       return;
@@ -39,8 +39,8 @@ const ResetPassword = () => {
 
     if (password !== confirmPassword) {
       toast({
-        title: "Mat khau khong khop",
-        description: "Vui long nhap lai mat khau trung khop",
+        title: "Mật khẩu không khớp",
+        description: "Vui lòng nhập lại mật khẩu trùng khớp",
         variant: "destructive",
       });
       return;
@@ -51,14 +51,14 @@ const ResetPassword = () => {
 
     if (error) {
       toast({
-        title: "Dat lai mat khau that bai",
+        title: "Đặt lại mật khẩu thất bại",
         description: error,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Dat lai mat khau thanh cong",
-        description: "Ban co the dang nhap voi mat khau moi",
+        title: "Đặt lại mật khẩu thành công",
+        description: "Bạn có thể đăng nhập với mật khẩu mới",
       });
       navigate("/auth");
     }
@@ -70,27 +70,27 @@ const ResetPassword = () => {
     <div className="min-h-screen flex items-center justify-center px-4 bg-slate-50">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Dat lai mat khau</CardTitle>
-          <CardDescription>Nhap mat khau moi cho tai khoan cua ban</CardDescription>
+          <CardTitle>Đặt lại mật khẩu</CardTitle>
+          <CardDescription>Nhập mật khẩu mới cho tài khoản của bạn</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleResetPassword} className="space-y-4">
             <Input
               type="password"
-              placeholder="Mat khau moi"
+              placeholder="Mật khẩu mới"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
             />
             <Input
               type="password"
-              placeholder="Nhap lai mat khau moi"
+              placeholder="Nhập lại mật khẩu mới"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               disabled={loading}
             />
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Dang xu ly..." : "Cap nhat mat khau"}
+              {loading ? "Đang xử lý..." : "Cập nhật mật khẩu"}
             </Button>
           </form>
         </CardContent>

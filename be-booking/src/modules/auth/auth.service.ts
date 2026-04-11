@@ -162,7 +162,8 @@ export class AuthService {
     const resetLink = `${frontendUrl}/reset-password?token=${encodeURIComponent(token)}`;
 
     await this.usersService.update(user.id, { resetToken: token });
-    await this.sendResetEmail(user.email, resetLink);
+    // Do not block API response on SMTP latency/timeouts.
+    void this.sendResetEmail(user.email, resetLink).catch(() => undefined);
 
     return { ok: true };
   }
