@@ -1,0 +1,12 @@
+{
+  "framework": "vite",
+  "installCommand": "pnpm install",
+  "buildCommand": "cd admin && pnpm run build",
+  "outputDirectory": "admin/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
