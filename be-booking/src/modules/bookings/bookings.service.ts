@@ -55,7 +55,7 @@ export class BookingsService {
     };
   }
 
-  async create(payload: { user: User; courtId: string; date: string; startTime: string; endTime: string; paymentMethod?: string; customerName?: string; customerPhone?: string; note?: string; totalAmount?: number; paymentPercentage?: number; selectedProducts?: any[]; selectedRentals?: any[] }) {
+  async create(payload: { user?: User; courtId: string; date: string; startTime: string; endTime: string; paymentMethod?: string; customerName?: string; customerPhone?: string; note?: string; totalAmount?: number; paymentPercentage?: number; selectedProducts?: any[]; selectedRentals?: any[] }) {
     const isAvailable = await this.checkAvailability(payload.courtId, payload.date, payload.startTime, payload.endTime);
     if (!isAvailable) {
       throw new BadRequestException('Sân đã được đặt trong khoảng thời gian này');

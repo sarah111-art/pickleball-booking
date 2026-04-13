@@ -11,7 +11,6 @@ export class BookingsController {
     return this.svc.findAvailability(courtId, date);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post()
   create(@Req() req: any, @Body() body: any) {
     const user = req.user;

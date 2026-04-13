@@ -94,38 +94,27 @@ const Booking = () => {
   }, [state, initialized]);
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const hydrateProfileIfLoggedIn = async () => {
       if (!auth.isAuthenticated()) {
-        toast({
-          title: "Vui lòng đăng nhập",
-          description: "Bạn cần đăng nhập để đặt sân",
-          variant: "destructive",
-        });
-        navigate("/auth", { state: { returnTo: "/booking", ...state } });
         return;
       }
 
-      const { data, error } = await auth.getProfile();
-      if (error || !data) {
-        toast({
-          title: "Vui lòng đăng nhập",
-          description: "Phiên đăng nhập đã hết hạn",
-          variant: "destructive",
-        });
+      const { data } = await auth.getProfile();
+      if (!data) {
         auth.logout();
-        navigate("/auth", { state: { returnTo: "/booking", ...state } });
-      } else {
-        setUser(data);
-        setBookingData((prev) => ({
-          ...prev,
-          customerName: prev.customerName || data.fullName || "",
-          customerPhone: prev.customerPhone || data.phone || "",
-        }));
+        return;
       }
+
+      setUser(data);
+      setBookingData((prev) => ({
+        ...prev,
+        customerName: prev.customerName || data.fullName || "",
+        customerPhone: prev.customerPhone || data.phone || "",
+      }));
     };
 
-    checkAuth();
-  }, [navigate, toast, state]);
+    hydrateProfileIfLoggedIn();
+  }, []);
 
   const updateBookingData = (data: Partial<BookingData>) => {
     setBookingData((prev) => ({ ...prev, ...data }));
@@ -145,7 +134,7 @@ const Booking = () => {
 
   const handleBookingComplete = async () => {
     try {
-      if (!user || !bookingData.venueId || !bookingData.courtId || !bookingData.date || bookingData.timeSlots.length === 0) {
+      if (!bookingData.venueId || !bookingData.courtId || !bookingData.date || bookingData.timeSlots.length === 0) {
         throw new Error("Thiếu thông tin đặt sân");
       }
       if (!bookingData.customerName.trim() || !bookingData.customerPhone.trim()) {
@@ -200,10 +189,6 @@ const Booking = () => {
   };
 
   const stepLabels = ["Địa điểm", "Sân & Ngày", "Giờ", "Sản phẩm", "Vợt thuê", "Xác nhận"];
-
-  if (!user) {
-    return null;
-  }
 
   // Determine if we should show court info banner
   const showCourtBanner = bookingData.courtId && bookingData.courtName && currentStep === 2;
