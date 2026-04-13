@@ -539,7 +539,7 @@ Ví dụ câu hỏi đầu tiên: "Chào bạn! 👋 Mình có thể giúp bạn
       .getMany();
 
     // Define typical time slots (6:00-22:00)
-    const allSlots = [];
+    const allSlots: string[] = [];
     for (let h = 6; h < 22; h++) {
       allSlots.push(`${h.toString().padStart(2, '0')}:00`);
     }
