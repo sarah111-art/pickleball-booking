@@ -110,11 +110,11 @@ export class PaymentsService {
     p.status = success ? 'paid' : 'failed';
     await this.payments.save(p);
 
-    // mark booking as confirmed (not paid, because only 50% deposit is paid)
+    // Mark booking payment state based on configured percentage.
     if (success) {
       const b = await this.bookings.findOne({ where: { id: p.booking.id } });
       if (b) {
-        b.status = 'confirmed'; // Changed from 'paid' to 'confirmed' since only deposit is paid
+        b.status = Number(b.paymentPercentage) === 100 ? 'paid' : 'confirmed';
         await this.bookings.save(b);
       }
     }
@@ -180,7 +180,7 @@ export class PaymentsService {
         // Update booking status
         const booking = await this.bookings.findOne({ where: { id: bookingId } });
         if (booking) {
-          booking.status = 'confirmed';
+          booking.status = Number(booking.paymentPercentage) === 100 ? 'paid' : 'confirmed';
           await this.bookings.save(booking);
         }
       }

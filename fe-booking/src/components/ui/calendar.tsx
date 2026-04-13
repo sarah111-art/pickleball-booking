@@ -13,67 +13,47 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-2 sm:p-3", className)}
+      className={cn("p-3", className)}
       classNames={{
-        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-        month: "space-y-3 sm:space-y-4",
-        caption: "flex justify-center pt-1 relative items-center px-8 sm:px-10",
-        caption_label: "text-base sm:text-lg font-semibold",
-        nav: "space-x-1 flex items-center",
-        nav_button: cn(
+        root: "w-fit",
+        months: "relative flex flex-col gap-4 lg:flex-row lg:gap-6",
+        month: "flex flex-col gap-4",
+        month_caption: "relative flex h-9 items-center justify-center px-10",
+        caption_label: "text-base font-semibold",
+        nav: "flex items-center gap-1",
+        button_previous: cn(
           buttonVariants({ variant: "outline" }),
-          "h-8 w-8 sm:h-9 sm:w-9 bg-transparent p-0 opacity-70 hover:opacity-100 hover:bg-accent",
+          "absolute left-1 h-8 w-8 bg-transparent p-0 opacity-70 hover:opacity-100"
         ),
-        nav_button_previous: "absolute left-0 sm:left-1",
-        nav_button_next: "absolute right-0 sm:right-1",
-        table: "w-full border-collapse",
-        head_row: "flex justify-between",
-        head_cell: cn(
-          "text-muted-foreground rounded-md font-medium text-xs sm:text-sm",
-          "w-10 h-8 sm:w-11 sm:h-9 flex items-center justify-center"
+        button_next: cn(
+          buttonVariants({ variant: "outline" }),
+          "absolute right-1 h-8 w-8 bg-transparent p-0 opacity-70 hover:opacity-100"
         ),
-        row: "flex w-full justify-between mt-1 sm:mt-2",
-        cell: cn(
-          "relative text-center text-sm p-0.5",
-          "h-10 w-10 sm:h-11 sm:w-11",
-          "focus-within:relative focus-within:z-20",
-          "[&:has([aria-selected])]:bg-primary/10 [&:has([aria-selected])]:rounded-lg",
-          "[&:has([aria-selected].day-outside)]:bg-accent/50",
-        ),
-        day: cn(
+        month_grid: "w-full border-collapse space-y-1",
+        weekdays: "flex",
+        weekday: "w-10 text-center text-xs font-medium text-muted-foreground sm:w-11",
+        week: "mt-2 flex w-full",
+        day: "h-10 w-10 p-0 text-sm sm:h-11 sm:w-11",
+        day_button: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-9 w-9 sm:h-10 sm:w-10 p-0 font-normal text-sm sm:text-base",
-          "aria-selected:opacity-100 rounded-lg",
-          "hover:bg-accent hover:text-accent-foreground",
-          "focus:bg-accent focus:text-accent-foreground",
-          "transition-colors duration-200"
+          "h-10 w-10 p-0 font-normal aria-selected:opacity-100 sm:h-11 sm:w-11"
         ),
-        day_range_end: "day-range-end",
-        day_selected: cn(
-          "bg-primary text-primary-foreground font-semibold",
-          "hover:bg-primary hover:text-primary-foreground",
-          "focus:bg-primary focus:text-primary-foreground",
-          "shadow-sm"
-        ),
-        day_today: cn(
-          "bg-accent/30 text-accent-foreground font-semibold",
-          "ring-2 ring-primary/30"
-        ),
-        day_outside: cn(
-          "day-outside text-muted-foreground/50",
-          "aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
-        ),
-        day_disabled: "text-muted-foreground/40 cursor-not-allowed hover:bg-transparent",
-        day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
-        day_hidden: "invisible",
+        selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+        today: "bg-accent/30 text-accent-foreground font-semibold ring-2 ring-primary/30",
+        outside: "text-muted-foreground/50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
+        disabled: "text-muted-foreground/40 opacity-50",
+        range_start: "day-range-start",
+        range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+        range_end: "day-range-end",
+        hidden: "invisible",
         ...classNames,
       }}
       components={{
-        Chevron: ({ orientation }) =>
+        Chevron: ({ orientation, className: iconClassName, ...iconProps }) =>
           orientation === "left" ? (
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className={cn("h-4 w-4", iconClassName)} {...iconProps} />
           ) : (
-            <ChevronRight className="h-5 w-5" />
+            <ChevronRight className={cn("h-4 w-4", iconClassName)} {...iconProps} />
           ),
       }}
       {...props}

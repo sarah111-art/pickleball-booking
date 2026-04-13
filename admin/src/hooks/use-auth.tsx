@@ -68,7 +68,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const hasPermission = (section: string, action: PermissionAction = 'view') => {
     if (!user) return false;
-    if (user.role === 'manager' && (!user.permissions || user.permissions.length === 0)) {
+    // Manager is super-admin in admin app and should always see all sections.
+    if (user.role === 'manager') {
       return true;
     }
 

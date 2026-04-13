@@ -12,9 +12,9 @@ const statusColors: Record<string, { bg: string; text: string; border: string }>
 };
 
 const statusLabels: Record<string, string> = {
-  pending: 'Chờ xác nhận',
-  confirmed: 'Đã xác nhận',
-  paid: 'Đã thanh toán',
+  pending: 'Chờ thanh toán',
+  confirmed: 'Đã thanh toán 50%',
+  paid: 'Đã thanh toán 100%',
   cancelled: 'Đã hủy',
 };
 
@@ -35,9 +35,37 @@ interface Booking {
     phone?: string;
   };
   status: "pending" | "confirmed" | "cancelled" | "paid";
+  paymentPercentage?: number;
   totalAmount?: number;
   note?: string;
 }
+
+const getPaymentStatusLabel = (booking: Booking) => {
+  if (booking.status === 'pending') return 'Chờ thanh toán';
+  if (booking.status === 'paid') return 'Đã thanh toán 100%';
+  if (booking.status === 'confirmed') return Number(booking.paymentPercentage) === 100 ? 'Đã thanh toán 100%' : 'Đã thanh toán 50%';
+  if (booking.status === 'cancelled') return 'Đã hủy';
+  return booking.status;
+};
+
+const PAYMENT_STATE_OPTIONS = [
+  { value: 'unpaid', label: 'Chưa thanh toán', status: 'pending', paymentPercentage: 100 },
+  { value: 'paid50', label: 'Đã thanh toán 50%', status: 'confirmed', paymentPercentage: 50 },
+  { value: 'paid100', label: 'Đã thanh toán 100%', status: 'paid', paymentPercentage: 100 },
+] as const;
+
+const getPaymentStateValue = (status?: string, paymentPercentage?: number) => {
+  if (status === 'paid') return 'paid100';
+  if (status === 'confirmed' && Number(paymentPercentage) === 50) return 'paid50';
+  return 'unpaid';
+};
+
+const mapPaymentStateToFields = (state: string) => {
+  const found = PAYMENT_STATE_OPTIONS.find((item) => item.value === state);
+  return found
+    ? { status: found.status, paymentPercentage: found.paymentPercentage }
+    : { status: 'pending', paymentPercentage: 100 };
+};
 
 interface Court {
   id: string;
@@ -67,6 +95,7 @@ const Bookings = () => {
     startTime: "",
     endTime: "",
     status: "pending",
+    paymentPercentage: 100,
     note: "",
   });
 
@@ -85,30 +114,37 @@ const Bookings = () => {
   // };
 
   useEffect(() => {
-let isMounted = true;
+    let isMounted = true;
 
-  const loadData = async () => {
-    try {
-      // Chạy song song cả 2 request cho nhanh
-      const [bookingsRes, courtsRes] = await Promise.all([
-        api.get<Booking[]>("/bookings"),
-        api.get<Court[]>("/courts")
-      ]);
+    const loadData = async () => {
+      try {
+        // Chạy song song cả 2 request cho nhanh
+        const [bookingsRes, courtsRes] = await Promise.all([
+          api.get<Booking[]>("/bookings"),
+          api.get<Court[]>("/courts")
+        ]);
 
-      if (isMounted) {
-        if (bookingsRes.data) setBookings(bookingsRes.data);
-        if (courtsRes.data) setCourts(courtsRes.data);
+        if (isMounted) {
+          if (bookingsRes.data) setBookings(bookingsRes.data);
+          if (courtsRes.data) setCourts(courtsRes.data);
+        }
+      } catch (err) {
+        console.error("Lỗi khi tải dữ liệu:", err);
+        if (isMounted) setError("Không thể tải dữ liệu");
       }
-    } catch (err) {
-      console.error("Lỗi khi tải dữ liệu:", err);
-      if (isMounted) setError("Không thể tải dữ liệu");
-    }
-  };
+    };
 
-  loadData();
+    loadData();
+    const intervalId = window.setInterval(loadData, 30000);
 
-  return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
   }, []);
+
+  // Hide cancelled bookings from admin schedule view.
+  const visibleBookings = bookings.filter((b) => b.status !== "cancelled");
 
 
   const handleCreateBooking = async (e: React.FormEvent) => {
@@ -127,7 +163,7 @@ let isMounted = true;
       if (res.data) {
         alert("Tạo đặt sân thành công");
         setShowCreateModal(false);
-        setFormData({ userEmail: "", courtId: "", date: "", startTime: "", endTime: "", status: "pending", note: "" });
+        setFormData({ userEmail: "", courtId: "", date: "", startTime: "", endTime: "", status: "pending", paymentPercentage: 100, note: "" });
         fetchBookings();
       } else alert("Lỗi: " + res.error);
     } catch (err) { alert("Có lỗi xảy ra"); }
@@ -162,6 +198,7 @@ let isMounted = true;
       startTime: booking.startTime,
       endTime: booking.endTime,
       status: booking.status,
+      paymentPercentage: booking.paymentPercentage || 100,
       note: booking.note || "",
     });
     setShowEditModal(true);
@@ -213,7 +250,7 @@ let isMounted = true;
 
   const getBookingsForDate = (date: Date) => {
     const dateStr = date.toLocaleDateString("sv-SE");
-    return bookings.filter(b => b.date === dateStr);
+    return visibleBookings.filter((b) => b.date === dateStr);
   };
 
   return (
@@ -341,7 +378,7 @@ let isMounted = true;
                         statusColors[b.status]?.bg,
                         statusColors[b.status]?.text
                       )}>
-                        {statusLabels[b.status]}
+                        {getPaymentStatusLabel(b)}
                       </span>
                     </div>
                     <div className="text-xs text-gray-600 space-y-1">
@@ -467,7 +504,7 @@ let isMounted = true;
                           "border",
                           selectedBooking.status && statusColors[selectedBooking.status] ? statusColors[selectedBooking.status].border : "border-gray-300"
                     )}>
-                      {selectedBooking.status ? (statusLabels[selectedBooking.status] || selectedBooking.status) : "N/A"}
+                      {selectedBooking ? getPaymentStatusLabel(selectedBooking) : "N/A"}
                     </span>
                   </div>
                 </div>
@@ -540,6 +577,18 @@ let isMounted = true;
                     />
                   </div>
                 </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase px-1">Trạng thái thanh toán</label>
+                  <select
+                    className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-sm appearance-none"
+                    value={getPaymentStateValue(formData.status, formData.paymentPercentage)}
+                    onChange={(e) => setFormData({ ...formData, ...mapPaymentStateToFields(e.target.value) })}
+                  >
+                    {PAYMENT_STATE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
                 <textarea 
                   placeholder="Ghi chú (tùy chọn)"
                   className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-sm h-24"
@@ -586,9 +635,10 @@ const EditBookingModal = ({
                 <label className="text-xs font-bold text-gray-400 uppercase ml-1">Trạng thái</label>
                 <select 
                   className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm appearance-none mt-1"
-                  value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}
+                  value={getPaymentStateValue(formData.status, formData.paymentPercentage)}
+                  onChange={e => setFormData({ ...formData, ...mapPaymentStateToFields(e.target.value) })}
                 >
-                  {Object.entries(statusLabels).map(([val, label]) => <option key={val} value={val}>{label}</option>)}
+                  {PAYMENT_STATE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                 </select>
              </div>
              

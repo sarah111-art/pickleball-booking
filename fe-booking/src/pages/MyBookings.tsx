@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 interface BookingWithDetails {
   id: string;
   status: string;
+  paymentPercentage?: number;
   total: number;
   date: string;
   createdAt: string;
@@ -191,20 +192,30 @@ const MyBookings = () => {
     });
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (booking: BookingWithDetails) => {
+    const status = booking.status;
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       pending: "outline",
       confirmed: "default",
+      paid: "default",
       cancelled: "destructive",
       completed: "secondary",
     };
 
-    const labels: Record<string, string> = {
-      pending: "Chờ xác nhận",
-      confirmed: "Đã xác nhận",
-      cancelled: "Đã hủy",
-      completed: "Hoàn thành",
-    };
+    const label =
+      status === "pending"
+        ? "Chờ thanh toán"
+        : status === "paid"
+        ? "Đã thanh toán 100%"
+        : status === "confirmed"
+        ? Number(booking.paymentPercentage) === 100
+          ? "Đã thanh toán 100%"
+          : "Đã thanh toán 50%"
+        : status === "cancelled"
+        ? "Đã hủy"
+        : status === "completed"
+        ? "Hoàn thành"
+        : status;
 
     const icons: Record<string, ReactNode> = {
       pending: <Loader2 className="h-3 w-3 mr-1 animate-spin" />,
@@ -216,7 +227,7 @@ const MyBookings = () => {
     return (
       <Badge variant={variants[status] || "outline"} className="flex items-center gap-1">
         {icons[status]}
-        {labels[status] || status}
+        {label}
       </Badge>
     );
   };
@@ -345,7 +356,7 @@ const MyBookings = () => {
                               </div>
                             </div>
                           </div>
-                          {getStatusBadge(booking.status)}
+                          {getStatusBadge(booking)}
                         </div>
                       </CardHeader>
                     </div>

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, MoreThan, Not } from 'typeorm';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { Booking } from '../../entities/booking.entity';
 import { BookingStatus } from '../../entities/booking.entity';
 import { Court } from '../../entities/court.entity';
@@ -55,7 +56,7 @@ export class BookingsService {
     };
   }
 
-  async create(payload: { user?: User; courtId: string; date: string; startTime: string; endTime: string; paymentMethod?: string; customerName?: string; customerPhone?: string; note?: string; totalAmount?: number; paymentPercentage?: number; selectedProducts?: any[]; selectedRentals?: any[] }) {
+  async create(payload: { user?: User; courtId: string; date: string; startTime: string; endTime: string; paymentMethod?: string; customerName?: string; customerPhone?: string; note?: string; totalAmount?: number; paymentPercentage?: number; status?: BookingStatus; selectedProducts?: any[]; selectedRentals?: any[] }) {
     const isAvailable = await this.checkAvailability(payload.courtId, payload.date, payload.startTime, payload.endTime);
     if (!isAvailable) {
       throw new BadRequestException('Sân đã được đặt trong khoảng thời gian này');
@@ -74,6 +75,10 @@ export class BookingsService {
       total = Math.round(courtPrice * hours);
     }
 
+    const validStatuses: BookingStatus[] = ['pending', 'confirmed', 'cancelled', 'paid'];
+    const nextStatus: BookingStatus = payload.status && validStatuses.includes(payload.status) ? payload.status : 'pending';
+    const nextPaymentPercentage = payload.paymentPercentage === 50 ? 50 : 100;
+
     const booking = this.repo.create({
       user: payload.user,
       court: { id: payload.courtId } as any,
@@ -83,9 +88,9 @@ export class BookingsService {
       paymentMethod: payload.paymentMethod,
       customerName: payload.customerName || payload.user?.fullName || undefined,
       customerPhone: payload.customerPhone || payload.user?.phone || undefined,
-      paymentPercentage: payload.paymentPercentage || 100,
+      paymentPercentage: nextPaymentPercentage,
       note: payload.note,
-      status: 'pending',
+      status: nextStatus,
       total,
       bookingItems: JSON.stringify({
         products: payload.selectedProducts || [],
@@ -96,7 +101,7 @@ export class BookingsService {
     return this.repo.save(booking);
   }
 
-  async createByAdmin(payload: { userEmail: string; courtId: string; date: string; startTime: string; endTime: string; paymentMethod?: string; customerName?: string; customerPhone?: string; note?: string }) {
+  async createByAdmin(payload: { userEmail: string; courtId: string; date: string; startTime: string; endTime: string; paymentMethod?: string; customerName?: string; customerPhone?: string; status?: BookingStatus; paymentPercentage?: number; note?: string }) {
     const user = await this.usersService.findByEmail(payload.userEmail);
     if (!user) throw new NotFoundException(`Không tìm thấy user với email: ${payload.userEmail}`);
     return this.create({ 
@@ -108,6 +113,8 @@ export class BookingsService {
       paymentMethod: payload.paymentMethod, 
       customerName: payload.customerName,
       customerPhone: payload.customerPhone,
+      status: payload.status,
+      paymentPercentage: payload.paymentPercentage,
       note: payload.note 
     });
   }
@@ -144,7 +151,7 @@ export class BookingsService {
     return this.repo.save(b);
   }
 
-  async update(id: string, data: { date?: string; startTime?: string; endTime?: string; status?: string; note?: string; courtId?: string; customerName?: string; customerPhone?: string }) {
+  async update(id: string, data: { date?: string; startTime?: string; endTime?: string; status?: string; paymentPercentage?: number; note?: string; courtId?: string; customerName?: string; customerPhone?: string }) {
     const b = await this.findOne(id);
 
     if (data.courtId) {
@@ -159,6 +166,12 @@ export class BookingsService {
         throw new BadRequestException('Invalid status');
       }
       b.status = data.status as BookingStatus;
+    }
+    if (data.paymentPercentage !== undefined) {
+      if (![50, 100].includes(Number(data.paymentPercentage))) {
+        throw new BadRequestException('Invalid paymentPercentage');
+      }
+      b.paymentPercentage = Number(data.paymentPercentage);
     }
     if (data.note !== undefined) b.note = data.note;
     if (data.customerName !== undefined) b.customerName = data.customerName;
@@ -183,5 +196,23 @@ export class BookingsService {
     const b = await this.findOne(id);
     await this.repo.remove(b);
     return { success: true, message: 'Booking deleted' };
+  }
+
+  /** Auto-cancel pending bookings that have not been paid within 10 minutes. Runs every 30 seconds. */
+  @Cron(CronExpression.EVERY_30_SECONDS)
+  async expirePendingBookings() {
+    const expiryMs = 10 * 60 * 1000; // 10 minutes
+    const cutoff = new Date(Date.now() - expiryMs);
+    const expired = await this.repo.find({
+      where: { status: 'pending', createdAt: LessThan(cutoff) },
+      select: ['id'],
+    });
+    if (expired.length === 0) return;
+    await this.repo
+      .createQueryBuilder()
+      .update(Booking)
+      .set({ status: 'cancelled' })
+      .whereInIds(expired.map((b) => b.id))
+      .execute();
   }
 }

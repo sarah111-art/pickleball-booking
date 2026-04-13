@@ -31,6 +31,7 @@ const ALL_SECTIONS = [
   { key: 'racket_orders', label: 'Đơn Vợt', icon: '📦' },
   { key: 'news', label: 'Tin Tức', icon: '📰' },
   { key: 'reviews', label: 'Đánh Giá', icon: '⭐' },
+  { key: 'settings', label: 'Cài Đặt Hệ Thống', icon: '⚙️' },
   { key: 'staff', label: 'Phân Quyền Nhân Viên', icon: '👮' },
 ];
 

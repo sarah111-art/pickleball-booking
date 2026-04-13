@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CheckCircle2, Calendar, MapPin, Clock, CreditCard, Loader2, RefreshCw } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface BookingDetail {
@@ -27,6 +28,7 @@ interface BookingDetail {
   courtPrice?: string;
   productPrice?: string;
   rentalPrice?: string;
+  createdAt?: string;
 }
 
 const PaymentSuccess = () => {
@@ -39,6 +41,9 @@ const PaymentSuccess = () => {
   const [loading, setLoading] = useState(true);
   const [paymentStatus, setPaymentStatus] = useState<"pending" | "paid" | "failed">("pending");
   const [isBanking, setIsBanking] = useState(false);
+  // countdown: seconds remaining before booking expires (10 min = 600s)
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const bankAccount = "0010000000355";
   const bankName = "Vietcombank";
@@ -69,6 +74,28 @@ const PaymentSuccess = () => {
     return () => clearInterval(interval);
   }, [bookingId, paymentStatus]);
 
+  // Countdown timer — derived from booking.createdAt
+  useEffect(() => {
+    if (!booking?.createdAt || paymentStatus !== "pending") return;
+    const EXPIRY_MS = 10 * 60 * 1000;
+    const created = new Date(booking.createdAt).getTime();
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.round((created + EXPIRY_MS - Date.now()) / 1000));
+      setSecondsLeft(remaining);
+      if (remaining === 0) {
+        setPaymentStatus("failed");
+        if (timerRef.current) clearInterval(timerRef.current);
+      }
+    };
+
+    tick();
+    timerRef.current = setInterval(tick, 1000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [booking?.createdAt, paymentStatus]);
+
   const loadBooking = async () => {
     try {
       setLoading(true);
@@ -90,6 +117,7 @@ const PaymentSuccess = () => {
             paymentPercentage: data.paymentPercentage || 100,
             depositAmount: Math.round((parseFloat(data.total || "0") * (data.paymentPercentage || 100)) / 100),
             status: data.status,
+            createdAt: (data as any).createdAt,
           };
           setBooking(formattedBooking);
           // Check if already paid
@@ -102,6 +130,9 @@ const PaymentSuccess = () => {
             setTimeout(() => {
               navigate("/my-bookings");
             }, 2500);
+          }
+          if (data.status === "cancelled") {
+            setPaymentStatus("failed");
           }
         }
     } catch (err: any) {
@@ -222,7 +253,46 @@ const PaymentSuccess = () => {
     );
   }
 
-  // Pending state - show QR code for payment
+  // Expired / cancelled state
+  if (paymentStatus === "failed") {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 pt-24 pb-8">
+          <div className="max-w-md mx-auto text-center space-y-6">
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-red-100">
+                <AlertTriangle className="h-10 w-10 text-red-500" />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground">Booking đã hết hiệu lực</h1>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Thời gian giữ chỗ 10 phút đã hết mà chưa nhận được thanh toán.
+                Booking của bạn đã bị hủy tự động để nhường chỗ cho khách khác.
+              </p>
+            </div>
+            <Card className="border-red-200 bg-red-50/50">
+              <CardContent className="pt-5 pb-5 text-sm text-red-700 space-y-1">
+                <p className="font-semibold">Bạn có thể:</p>
+                <ul className="text-left list-disc list-inside space-y-1 text-muted-foreground">
+                  <li>Đặt lại sân và thanh toán ngay trong 10 phút.</li>
+                  <li>Liên hệ quản lý nếu bạn đã chuyển khoản nhưng hệ thống chưa ghi nhận.</li>
+                </ul>
+              </CardContent>
+            </Card>
+            <div className="flex flex-col gap-3">
+              <Button onClick={() => navigate("/booking")} size="lg">
+                Đặt sân lại
+              </Button>
+              <Button variant="outline" onClick={() => navigate("/")}>
+                Về trang chủ
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (paymentStatus === "pending") {
     return (
       <div className="min-h-screen bg-background">
@@ -238,6 +308,24 @@ const PaymentSuccess = () => {
 
             <Card className="border-2 border-primary/20 bg-primary/5">
               <CardContent className="pt-6 flex flex-col items-center">
+                {/* Countdown banner */}
+                {secondsLeft !== null && (
+                  <div className={[
+                    "w-full rounded-xl px-4 py-3 mb-5 flex items-center justify-between gap-3",
+                    secondsLeft > 120
+                      ? "bg-amber-50 border border-amber-200 text-amber-800"
+                      : "bg-red-50 border border-red-300 text-red-700 animate-pulse",
+                  ].join(" ")}>
+                    <div className="flex items-center gap-2 text-sm font-semibold">
+                      <AlertTriangle className="h-4 w-4 shrink-0" />
+                      Thời gian giữ chỗ còn lại
+                    </div>
+                    <span className="text-2xl font-black tabular-nums tracking-tight">
+                      {String(Math.floor(secondsLeft / 60)).padStart(2, "0")}:{String(secondsLeft % 60).padStart(2, "0")}
+                    </span>
+                  </div>
+                )}
+
                 <div className="bg-white p-4 rounded-xl shadow-sm border border-border mb-6">
                   <img
                     src={generateSePayQRUrl()}

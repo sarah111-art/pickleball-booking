@@ -43,6 +43,8 @@ export class BookingsController {
       paymentMethod: body.paymentMethod,
       customerName: body.customerName,
       customerPhone: body.customerPhone,
+      status: body.status,
+      paymentPercentage: body.paymentPercentage,
       note: body.note,
     });
   }
@@ -80,6 +82,7 @@ export class BookingsController {
       customerName: body.customerName,
       customerPhone: body.customerPhone,
       status: body.status,
+      paymentPercentage: body.paymentPercentage,
       note: body.note,
     });
   }

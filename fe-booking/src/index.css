@@ -93,3 +93,28 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* ─── Splash screen keyframe animations ─── */
+@keyframes splash-pop {
+  from { opacity: 0; transform: scale(0.8); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes splash-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes splash-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes splash-bounce {
+  0%, 100% { transform: translateY(0);    opacity: 1; }
+  50%       { transform: translateY(-8px); opacity: 0.6; }
+}
+
+@keyframes splash-float {
+  from { transform: translateY(0) rotate(-5deg); }
+  to   { transform: translateY(-18px) rotate(8deg); }
+}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,15 +30,7 @@ const CourtDateSelection = ({ bookingData, updateBookingData, onNext }: CourtDat
   // Check if court was pre-selected (from CourtCard click)
   const hasPreselectedCourt = !!bookingData.courtId;
 
-  useEffect(() => {
-    if (bookingData.venueId && !hasPreselectedCourt) {
-      fetchCourts();
-    } else {
-      setLoading(false);
-    }
-  }, [bookingData.venueId, hasPreselectedCourt]);
-
-  const fetchCourts = async () => {
+  const fetchCourts = useCallback(async () => {
     try {
       const { data, error } = await api.get<Court[]>(`/locations/${bookingData.venueId}/courts`);
 
@@ -49,7 +41,15 @@ const CourtDateSelection = ({ bookingData, updateBookingData, onNext }: CourtDat
     } finally {
       setLoading(false);
     }
-  };
+  }, [bookingData.venueId]);
+
+  useEffect(() => {
+    if (bookingData.venueId && !hasPreselectedCourt) {
+      fetchCourts();
+    } else {
+      setLoading(false);
+    }
+  }, [bookingData.venueId, hasPreselectedCourt, fetchCourts]);
 
   const handleSelectCourt = (court: Court) => {
     setSelectedCourtId(court.id);
@@ -155,13 +155,15 @@ const CourtDateSelection = ({ bookingData, updateBookingData, onNext }: CourtDat
               )}
             </CardHeader>
             <CardContent className="pt-6 sm:pt-8 px-3 sm:px-6 pb-6 sm:pb-8">
-              <div className="flex justify-center">
+              <div className="rounded-xl border bg-background shadow-sm">
                 <Calendar
                   mode="single"
+                  defaultMonth={selectedDate ?? new Date()}
                   selected={selectedDate}
                   onSelect={handleDateSelect}
+                  numberOfMonths={2}
                   disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                  className="scale-110 sm:scale-125 origin-top"
+                  className="w-full rounded-lg"
                 />
               </div>
               {selectedDate && (
