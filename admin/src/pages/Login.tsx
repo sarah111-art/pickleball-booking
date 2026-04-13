@@ -22,7 +22,13 @@ const Login = () => {
     const { data, error: err } = await api.post<{ accessToken: string; refreshToken?: string }>('/auth/login', { email, password });
 
     if (err || !data?.accessToken) {
-      setError(err || 'Đăng nhập thất bại');
+      const normalizedError =
+        err?.toLowerCase().includes('unauthorized') ||
+        err?.toLowerCase().includes('invalid') ||
+        err?.toLowerCase().includes('không đúng')
+          ? 'Email hoặc mật khẩu không đúng'
+          : err || 'Đăng nhập thất bại';
+      setError(normalizedError);
       setLoading(false);
       return;
     }

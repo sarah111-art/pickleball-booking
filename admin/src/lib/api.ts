@@ -27,18 +27,34 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<ApiR
       headers,
     });
 
-    const data = await res.json();
+    let data: any = null;
+    try {
+      data = await res.json();
+    } catch {
+      data = null;
+    }
+
+    const message = Array.isArray(data?.message)
+      ? data.message.join(', ')
+      : data?.message || data?.error;
+
+    const isAuthLoginEndpoint = endpoint === '/auth/login';
 
     // Handle 401 Unauthorized
     if (res.status === 401) {
+      // Do not force redirect on login call; return readable error for UI.
+      if (isAuthLoginEndpoint) {
+        return { error: message || 'Email hoặc mật khẩu không đúng' };
+      }
+
       localStorage.removeItem('accessToken');
       localStorage.removeItem('user');
       window.location.href = '/login';
-      return { error: 'Unauthorized - redirecting to login' };
+      return { error: message || 'Unauthorized - redirecting to login' };
     }
 
     if (!res.ok) {
-      return { error: data.message || `Error: ${res.status}` };
+      return { error: message || `Error: ${res.status}` };
     }
 
     return { data };
