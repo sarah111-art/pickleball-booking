@@ -59,7 +59,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!user && localStorage.getItem('accessToken')) {
       refreshProfile();
-      return;
     }
 
     if (user && localStorage.getItem('accessToken')) {

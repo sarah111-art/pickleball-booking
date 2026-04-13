@@ -7,6 +7,8 @@ import { ChatMessage } from '../../entities/chat-message.entity';
 import { Venue } from '../../entities/venue.entity';
 import { Court } from '../../entities/court.entity';
 import { Location } from '../../entities/location.entity';
+import { Racket } from '../../entities/racket.entity';
+import { Booking } from '../../entities/booking.entity';
 
 interface ChatRequest {
   messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
@@ -17,7 +19,15 @@ interface SearchParams {
   district?: string;
   maxPrice?: number;
   timeSlot?: 'morning' | 'afternoon' | 'evening';
+  date?: string;
 }
+
+interface ContactInfo {
+  name?: string;
+  phone?: string;
+}
+
+type Intent = 'booking' | 'racket_consult' | 'available_slots' | 'collect_contact' | 'unknown';
 
 @Injectable()
 export class ChatService {
@@ -36,6 +46,10 @@ export class ChatService {
     private courtRepo: Repository<Court>,
     @InjectRepository(Location)
     private locationRepo: Repository<Location>,
+    @InjectRepository(Racket)
+    private racketRepo: Repository<Racket>,
+    @InjectRepository(Booking)
+    private bookingRepo: Repository<Booking>,
     private configService: ConfigService,
   ) {
     this.openaiApiKey = this.configService.get<string>('OPENAI_API_KEY') || '';
@@ -435,6 +449,157 @@ Ví dụ câu hỏi đầu tiên: "Chào bạn! 👋 Mình có thể giúp bạn
     const raw = address || '';
     const m = raw.match(/(Quận\s*\d+|Q\s*\d+|Thủ\s*Đức|Thu\s*Duc|Bình\s*Thạnh|Binh\s*Thanh|Gò\s*Vấp|Go\s*Vap|Phú\s*Nhuận|Phu\s*Nhuan)/i);
     return m?.[1] || '';
+  }
+
+  // ========== NEW FEATURES ==========
+
+
+  /** Nhận diện intent của user từ message */
+  private detectIntent(message: string): Intent {
+    const lower = message.toLowerCase();
+    if (/mua vợt|vợt|racket|paddle|chọn vợt|tư vấn vợt/.test(lower)) return 'racket_consult';
+    if (/giờ trống|slot|còn trống|trống không|available/.test(lower)) return 'available_slots';
+    if (/đặt sân|book|booking|chơi/.test(lower)) return 'booking';
+    if (/tên|sdt|điện thoại|liên hệ|contact|callback/.test(lower)) return 'collect_contact';
+    return 'unknown';
+  }
+
+  /** Tư vấn mua vợt dựa trên mô tả/ngân sách */
+  async searchRackets(params: {
+    keyword?: string;
+    type?: string;
+    maxPrice?: number;
+    minPrice?: number;
+    brand?: string;
+  }): Promise<Racket[]> {
+    const qb = this.racketRepo.createQueryBuilder('r').where('r.isActive = :isActive', { isActive: true });
+
+    if (params.keyword) {
+      qb.andWhere('(LOWER(r.name) LIKE :kw OR LOWER(r.description) LIKE :kw OR LOWER(r.brand) LIKE :kw)', {
+        kw: `%${params.keyword.toLowerCase()}%`,
+      });
+    }
+    if (params.type) {
+      qb.andWhere('r.type = :type', { type: params.type });
+    }
+    if (params.maxPrice !== undefined) {
+      qb.andWhere('r.price <= :maxPrice', { maxPrice: params.maxPrice });
+    }
+    if (params.minPrice !== undefined) {
+      qb.andWhere('r.price >= :minPrice', { minPrice: params.minPrice });
+    }
+    if (params.brand) {
+      qb.andWhere('LOWER(r.brand) LIKE :brand', { brand: `%${params.brand.toLowerCase()}%` });
+    }
+
+    return qb.orderBy('r.price', 'ASC').getMany();
+  }
+
+  /** Format kết quả tư vấn vợt */
+  private formatRacketResults(rackets: Racket[], query: string): string {
+    if (rackets.length === 0) {
+      return `Không tìm thấy vợt phù hợp với yêu cầu "${query}". Bạn có thể mô tả thêm (ngân sách, trình độ, thương hiệu...) để mình gợi ý tốt hơn nhé! 🎾`;
+    }
+
+    let msg = `Mình tìm thấy ${rackets.length} vợt phù hợp:\n\n`;
+    rackets.slice(0, 5).forEach((r, i) => {
+      const typeLabel: Record<string, string> = {
+        beginner: '🟢 Người mới',
+        intermediate: '🟡 Trung bình',
+        professional: '🔴 Chuyên nghiệp',
+      };
+      msg += `${i + 1}. **${r.name}** ${typeLabel[r.type] || ''}\n`;
+      msg += `   💰 ${Number(r.price).toLocaleString('vi-VN')}đ`;
+      if (r.brand) msg += ` | 🏷️ ${r.brand}`;
+      if (r.description) msg += `\n   📝 ${r.description}`;
+      msg += '\n\n';
+    });
+    msg += 'Bạn cần mình tư vấn thêm về sản phẩm nào không? 😊';
+    return msg;
+  }
+
+  /** Tìm slot trống theo ngày */
+  async getAvailableSlots(venueId: string, date: string): Promise<string[]> {
+    // Parse date
+    const targetDate = new Date(date);
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Get all bookings for this venue on this date
+    const existingBookings = await this.bookingRepo
+      .createQueryBuilder('b')
+      .where('b.venueId = :venueId', { venueId })
+      .andWhere('b.status NOT IN (:...canceled)', { canceled: ['cancelled', 'canceled'] })
+      .andWhere('b.date >= :start AND b.date <= :end', {
+        start: startOfDay,
+        end: endOfDay,
+      })
+      .getMany();
+
+    // Define typical time slots (6:00-22:00)
+    const allSlots = [];
+    for (let h = 6; h < 22; h++) {
+      allSlots.push(`${h.toString().padStart(2, '0')}:00`);
+    }
+
+    // Exclude booked slots
+    const bookedSlots = new Set(
+      existingBookings.map((b) => {
+        const d = new Date(b.date);
+        return `${d.getHours().toString().padStart(2, '0')}:00`;
+      }),
+    );
+
+    return allSlots.filter((s) => !bookedSlots.has(s));
+  }
+
+  /** Format danh sách giờ trống */
+  private formatAvailableSlots(slots: string[], date: string): string {
+    if (slots.length === 0) {
+      return `Rất tiếc, không còn slot trống nào cho ngày ${date}. Bạn có thể chọn ngày khác không? 📅`;
+    }
+
+    const dateLabel = new Date(date).toLocaleDateString('vi-VN', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    // Group into morning/afternoon/evening
+    const morning = slots.filter((s) => {
+      const h = parseInt(s.split(':')[0]);
+      return h >= 6 && h < 12;
+    });
+    const afternoon = slots.filter((s) => {
+      const h = parseInt(s.split(':')[0]);
+      return h >= 12 && h < 18;
+    });
+    const evening = slots.filter((s) => {
+      const h = parseInt(s.split(':')[0]);
+      return h >= 18 && h < 22;
+    });
+
+    let msg = `🗓️ **Giờ trống ngày ${dateLabel}:**\n\n`;
+    if (morning.length > 0) msg += `🌤️ Sáng (${morning.length} slot): ${morning.join(', ')}\n`;
+    if (afternoon.length > 0) msg += `☀️ Chiều (${afternoon.length} slot): ${afternoon.join(', ')}\n`;
+    if (evening.length > 0) msg += `🌙 Tối (${evening.length} slot): ${evening.join(', ')}\n`;
+    msg += '\nBạn muốn đặt slot nào? Click "Đặt ngay" để giữ chỗ nhé! 🎾';
+    return msg;
+  }
+
+  /** Thu thập thông tin liên hệ */
+  private async collectContactInfo(conversationId: string, userMessage: string): Promise<{ name?: string; phone?: string }> {
+    const info: { name?: string; phone?: string } = {};
+    // Extract phone number pattern
+    const phoneMatch = userMessage.match(/(0\d{9,10})/);
+    if (phoneMatch) info.phone = phoneMatch[1];
+    // Extract name (simple: first capitalized phrase)
+    const nameMatch = userMessage.match(/(?:tên là|tên|mình là|mình)\s+([A-ZÀÁẢÃÂĐÈÉẺẼÊÌÍỈĨÔƠÙÚỦỨŨĂẠẮẰẲẴẶẤẦẨẪẬẸẺẼỀỂỄỆỌỘỒỔỖỘỚỜỞỠỢỤỦỨỪ\w]+(?:\s+[A-ZÀÁẢÃÂĐÈÉẺẼÊÌÍỈĨÔƠÙÚỦỨŨĂẠẮẰẲẴẶẤẦẨẪẬẸẺẼỀỂỄỆỌỘỒỔỖỘỚỜỞỠỢỤỦỨỪ\w]+)*)/i);
+    if (nameMatch) info.name = nameMatch[1].trim();
+    return info;
   }
 }
 

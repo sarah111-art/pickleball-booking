@@ -74,23 +74,42 @@ const Bookings = () => {
   const canEdit = hasPermission('bookings', 'edit');
   const canDelete = hasPermission('bookings', 'delete');
 
+  const fetchBookings = async () => {
+    const res = await api.get<Booking[]>("/bookings");
+    if (res.data) setBookings(res.data);
+  };
+
+  // const fetchCourts = async () => {
+  //   const res = await api.get<Court[]>("/courts");
+  //   if (res.data) setCourts(res.data);
+  // };
+
   useEffect(() => {
-    fetchBookings();
-    fetchCourts();
+let isMounted = true;
+
+  const loadData = async () => {
+    try {
+      // Chạy song song cả 2 request cho nhanh
+      const [bookingsRes, courtsRes] = await Promise.all([
+        api.get<Booking[]>("/bookings"),
+        api.get<Court[]>("/courts")
+      ]);
+
+      if (isMounted) {
+        if (bookingsRes.data) setBookings(bookingsRes.data);
+        if (courtsRes.data) setCourts(courtsRes.data);
+      }
+    } catch (err) {
+      console.error("Lỗi khi tải dữ liệu:", err);
+      if (isMounted) setError("Không thể tải dữ liệu");
+    }
+  };
+
+  loadData();
+
+  return () => { isMounted = false; };
   }, []);
 
-  const fetchBookings = async () => {
-    setLoading(true);
-    const res = await api.get<Booking[]>("/bookings");
-    setLoading(false);
-    if (res.data) setBookings(res.data);
-    else setError(res.error || "Could not load bookings");
-  };
-
-  const fetchCourts = async () => {
-    const res = await api.get<Court[]>("/courts");
-    if (res.data) setCourts(res.data);
-  };
 
   const handleCreateBooking = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -198,16 +217,16 @@ const Bookings = () => {
   };
 
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto bg-gray-50 min-h-screen">
+    <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto bg-gray-50 min-h-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Quản Lý Đặt Sân</h1>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Quản Lý Đặt Sân</h1>
           <p className="text-gray-500 mt-1">Lịch trình đặt sân của toàn hệ thống</p>
         </div>
         {canAdd && (
           <button 
             onClick={() => setShowCreateModal(true)}
-            className="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg shadow-primary/20 transition-all flex items-center gap-2"
+            className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2"
           >
             <CalendarIcon className="w-5 h-5" />
             Đặt Sân Mới
@@ -215,10 +234,10 @@ const Bookings = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <div className="lg:col-span-3 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xl font-bold text-gray-800">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+        <div className="lg:col-span-3 bg-white p-3 sm:p-6 rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-4 sm:mb-8 gap-2">
+            <h2 className="text-base sm:text-xl font-bold text-gray-800">
               Tháng {currentDate.getMonth() + 1}, {currentDate.getFullYear()}
             </h2>
             <div className="flex gap-2">
@@ -239,7 +258,7 @@ const Bookings = () => {
 
           <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-lg overflow-hidden border border-gray-200">
             {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map(day => (
-              <div key={day} className="bg-gray-50 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
+              <div key={day} className="bg-gray-50 py-2 sm:py-3 text-center text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">
                 {day}
               </div>
             ))}
@@ -254,7 +273,7 @@ const Bookings = () => {
                   key={idx}
                   onClick={() => setSelectedDate(day)}
                   className={cn(
-                    "min-h-[120px] bg-white p-2 cursor-pointer transition-all hover:bg-blue-50/30",
+                    "min-h-[90px] sm:min-h-[120px] bg-white p-1.5 sm:p-2 cursor-pointer transition-all hover:bg-blue-50/30",
                     !isCurrentMonth && "bg-gray-50/50 grayscale-[0.5]",
                     isSelected && "ring-2 ring-primary ring-inset z-10 bg-blue-50/50"
                   )}
@@ -299,8 +318,8 @@ const Bookings = () => {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h3 className="text-lg font-bold text-gray-800 mb-4 sm:mb-6 flex items-center gap-2">
             <Clock className="w-5 h-5 text-primary" />
             Lịch Ngày {selectedDate ? selectedDate.getDate() : new Date().getDate()}
           </h3>
@@ -350,8 +369,8 @@ const Bookings = () => {
 
       {showDetailsModal && selectedBooking && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-6 flex justify-between items-center">
+          <div className="bg-white rounded-3xl w-full max-w-xl max-h-[90vh] shadow-2xl overflow-y-auto animate-in fade-in zoom-in duration-200">
+            <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-4 sm:p-6 flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-bold text-white">Chi Tiết Đặt Sân</h3>
                 <p className="text-gray-400 text-xs mt-1 lowercase">ID: {selectedBooking.id}</p>
@@ -364,8 +383,8 @@ const Bookings = () => {
               </button>
             </div>
             
-            <div className="p-8 space-y-8">
-              <div className="grid grid-cols-2 gap-8">
+            <div className="p-5 sm:p-8 space-y-6 sm:space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                 <div className="space-y-6">
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
@@ -428,8 +447,8 @@ const Bookings = () => {
                 </div>
               )}
 
-              <div className="pt-6 border-t border-gray-100 flex justify-between items-center">
-                <div className="flex gap-2">
+              <div className="pt-6 border-t border-gray-100 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                   {canEdit && (
                     <button 
                       onClick={() => handleEditClick(selectedBooking)}
@@ -439,7 +458,7 @@ const Bookings = () => {
                       Chỉnh sửa
                     </button>
                   )}
-                  <div className="flex items-center gap-3 ml-4">
+                  <div className="flex items-center gap-3">
                     <p className="text-sm font-bold text-gray-500 uppercase">Trạng Thái:</p>
                     <span className={cn(
                           "px-4 py-1.5 rounded-full text-xs font-extrabold uppercase",
@@ -479,12 +498,12 @@ const Bookings = () => {
 
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
-            <div className="bg-primary p-6 flex justify-between items-center text-white">
+          <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] shadow-2xl overflow-y-auto">
+            <div className="bg-primary p-4 sm:p-6 flex justify-between items-center text-white">
               <h3 className="text-xl font-bold">Đặt Sân Hộ Khách</h3>
               <button onClick={() => setShowCreateModal(false)}><X className="w-6 h-6" /></button>
             </div>
-            <form onSubmit={handleCreateBooking} className="p-8 space-y-6">
+            <form onSubmit={handleCreateBooking} className="p-5 sm:p-8 space-y-6">
               <div className="space-y-4">
                 <input 
                   type="email" placeholder="Email khách hàng" required
@@ -503,7 +522,7 @@ const Bookings = () => {
                   className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary outline-none text-sm"
                   value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})}
                 />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase px-1">Giờ bắt đầu</label>
                     <input 
@@ -556,12 +575,12 @@ const EditBookingModal = ({
   if (!show) return null;
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
-      <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
-        <div className="bg-blue-600 p-6 flex justify-between items-center text-white">
+      <div className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] shadow-2xl overflow-y-auto">
+        <div className="bg-blue-600 p-4 sm:p-6 flex justify-between items-center text-white">
           <h3 className="text-xl font-bold">Chỉnh Sửa Đặt Sân</h3>
           <button onClick={onClose}><X className="w-6 h-6" /></button>
         </div>
-        <form onSubmit={onSave} className="p-8 space-y-4">
+        <form onSubmit={onSave} className="p-5 sm:p-8 space-y-4">
           <div className="space-y-4">
              <div>
                 <label className="text-xs font-bold text-gray-400 uppercase ml-1">Trạng thái</label>
@@ -584,7 +603,7 @@ const EditBookingModal = ({
                 </select>
              </div>
 
-             <div className="grid grid-cols-2 gap-4">
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-bold text-gray-400 uppercase ml-1">Giờ bắt đầu</label>
                   <input 
