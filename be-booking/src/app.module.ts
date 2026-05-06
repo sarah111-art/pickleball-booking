@@ -70,12 +70,25 @@ import { BlogPostsModule } from './modules/blog-posts/blog-posts.module';
           };
         }
 
+        // Common pool configuration for both URL and manual connection
+        const poolConfig = {
+          extra: {
+            connectionLimit: 10,
+            waitForConnections: true,
+            queueLimit: 0,
+            enableKeepAlive: true,
+            keepAliveInitialDelayMs: 0,
+            decimalNumbers: true,
+          },
+        };
+
         if (databaseUrl) {
           return {
             type: 'mysql' as const,
             url: databaseUrl,
             entities,
             synchronize: true,
+            ...poolConfig,
           };
         }
 
@@ -88,6 +101,7 @@ import { BlogPostsModule } from './modules/blog-posts/blog-posts.module';
           database: (cfg.get<string>('DB_DATABASE') ?? cfg.get<string>('DB_NAME') ?? cfg.get<string>('MYSQLDATABASE') ?? 'pickleball_booking') as string,
           entities,
           synchronize: true,
+          ...poolConfig,
         };
       },
     }),
