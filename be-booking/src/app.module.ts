@@ -77,7 +77,6 @@ import { BlogPostsModule } from './modules/blog-posts/blog-posts.module';
             waitForConnections: true,
             queueLimit: 0,
             enableKeepAlive: true,
-            keepAliveInitialDelayMs: 0,
             decimalNumbers: true,
           },
         };
